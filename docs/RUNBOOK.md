@@ -67,3 +67,9 @@ curl -X POST http://127.0.0.1:8100/internal/payouts/<id>/result \
 
 Edit `packages/shared/rails.json`, run `cargo test` and `pytest` (both check every referenced rail
 exists), deploy. The per-country SEO page is generated automatically.
+
+## Verify a deploy
+
+`bash deploy/e2e-test.sh` runs the full money flow (signup, click, signed postback, escrow,
+ledger invariants, KYC gate, payout) against a throwaway `affylitics_e2e` database on the same
+Aiven server and drops it afterwards. Needs `postgresql-client`.
