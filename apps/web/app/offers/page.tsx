@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Icon } from "@/components/Icons";
+import { EXAMPLE_OFFERS, OfferCard } from "@/components/OfferCard";
 import { serverApi, type Offer } from "@/lib/api";
-import { payoutLabel } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Affiliate offers open to publishers worldwide",
-  description: "Browse escrow-funded affiliate offers you can promote from any country. See commission, hold period and cookie window before you join.",
+  title: "Explore affiliate offers from brands worldwide",
+  description: "Browse funded affiliate campaigns on NetAffil. Compare commission, conversion type, cookie window and target markets, then get your link in one click.",
   alternates: { canonical: "/offers" },
 };
 
@@ -20,46 +21,59 @@ export default async function Offers({ searchParams }: Props) {
   if (sp.category) qs.set("category", sp.category);
   const { ok, data } = await serverApi<Offer[]>(`/api/offers?${qs}`, { revalidate: 300 });
   const offers = data ?? [];
+  const searching = !!(sp.q || sp.category);
 
   return (
-    <div className="container section">
-      <p className="eyebrow">Marketplace</p>
-      <h1>Offers you can promote today</h1>
-      <p className="lede">Every offer below is open to publishers in every country. Funded offers have money waiting in escrow.</p>
-
-      {sp.link === "expired" && (
-        <div className="alert info" role="status">That link&apos;s offer has ended. Here are offers that are live right now.</div>
-      )}
-
-      <form role="search" action="/offers" className="row" style={{ margin: "24px 0 32px" }}>
-        <label htmlFor="q" className="sr-only">Search offers</label>
-        <input id="q" name="q" className="input" style={{ maxWidth: 420 }} defaultValue={sp.q} placeholder="Search offers, e.g. solar, hosting, courses" />
-        <button className="btn" type="submit">Search</button>
-      </form>
-
-      {!ok && <div className="alert error" role="alert">Offers could not be loaded just now. Please try again in a minute.</div>}
-      {ok && offers.length === 0 && (
-        <div className="card">
-          <h2 style={{ fontSize: "1.4rem" }}>No offers match yet</h2>
-          <p className="muted">New advertisers are joining. Create your account now and you&apos;ll be ready when they go live.</p>
-          <Link href="/signup" className="btn">Join free</Link>
+    <>
+      <section className="page-hero">
+        <div className="container">
+          <p className="eyebrow">Explore</p>
+          <h1>Find offers <span className="grad">worth promoting.</span></h1>
+          <p className="lede">Funded campaigns from brands worldwide. Compare commissions, markets and cookie windows, then grab your link.</p>
+          <form role="search" action="/offers" className="row" style={{ marginTop: 24, maxWidth: 640 }}>
+            <label htmlFor="q" className="sr-only">Search offers</label>
+            <input id="q" name="q" className="input" style={{ flex: 1, minWidth: 220 }} defaultValue={sp.q} placeholder="Search offers, e.g. solar, software, fashion" />
+            <button className="btn" type="submit">Search</button>
+          </form>
         </div>
-      )}
+      </section>
 
-      <ul className="grid cols-3" style={{ listStyle: "none", padding: 0 }}>
-        {offers.map((o) => (
-          <li key={o.id} className="card offer-card">
-            <div className="row">
-              <span className="pill">{o.category}</span>
-              {o.funded ? <span className="pill green">Funded</span> : <span className="pill warn">Awaiting funds</span>}
-            </div>
-            <h3><Link href={`/offers/${o.slug}`}>{o.title}</Link></h3>
-            <p className="muted" style={{ margin: 0 }}>by {o.brand}{o.brand_verified ? " (verified)" : ""}</p>
-            <p className="payout" style={{ margin: 0 }}>{payoutLabel(o)}</p>
-            <p className="muted" style={{ margin: 0, fontSize: ".9rem" }}>{o.cookie_days}-day cookie · {o.hold_days}-day hold</p>
-          </li>
-        ))}
-      </ul>
-    </div>
+      <section className="section" style={{ paddingTop: 48 }}>
+        <div className="container">
+          {sp.link === "expired" && (
+            <div className="alert info" role="status">That link&apos;s campaign has ended. Here are campaigns that are live right now.</div>
+          )}
+          {!ok && <div className="alert error" role="alert">Offers could not be loaded just now. Please try again in a minute.</div>}
+
+          {offers.length > 0 && (
+            <ul className="offer-grid">{offers.map((o) => <OfferCard key={o.id} o={o} />)}</ul>
+          )}
+
+          {ok && offers.length === 0 && (
+            <>
+              <div className="card spread" style={{ marginBottom: 32 }}>
+                <div>
+                  <h2 style={{ fontSize: "1.5rem", margin: 0 }}>{searching ? "No live offers match that search" : "The first campaigns are launching"}</h2>
+                  <p className="muted" style={{ margin: "6px 0 0" }}>
+                    Create your account now and you&apos;ll be ready the moment they go live. Brands can launch the first ones.
+                  </p>
+                </div>
+                <div className="row">
+                  <Link href="/signup?role=publisher" className="btn">Join as an affiliate</Link>
+                  <Link href="/signup?role=advertiser" className="btn ghost">Launch a campaign <Icon.arrow /></Link>
+                </div>
+              </div>
+              {!searching && (
+                <>
+                  <h2 style={{ fontSize: "1.4rem" }}>What campaigns look like</h2>
+                  <ul className="offer-grid">{EXAMPLE_OFFERS.map((o) => <OfferCard key={o.title} o={o} />)}</ul>
+                  <p className="muted" style={{ marginTop: 16, fontSize: ".9rem" }}>These are illustrative examples, not live campaigns.</p>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </section>
+    </>
   );
 }

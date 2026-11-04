@@ -19,7 +19,7 @@ export default function Privacy() {
       <h2>Your rights</h2>
       <p>You can request a copy of your data, correction or deletion. Financial records are kept for the period the law requires. This policy is written to meet GDPR, Kenya&apos;s Data Protection Act, Nigeria&apos;s NDPA and South Africa&apos;s POPIA.</p>
       <h2>Contact</h2>
-      <p>privacy@affylitics.com</p>
+      <p>privacy@netaffil.com</p>
     </div>
   );
 }

@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from . import api_client, config, funding, fx, kyc, payouts, rails
 
 log = logging.getLogger("intel")
-app = FastAPI(title="Affylitics intel", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="NetAffil intel", docs_url=None, redoc_url=None, openapi_url=None)
 
 
 def internal(authorization: str = Header(default="")) -> None:

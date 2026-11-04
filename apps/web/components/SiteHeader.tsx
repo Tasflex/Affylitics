@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
 const LINKS = [
-  { href: "/offers", label: "Offers" },
-  { href: "/publishers", label: "Publishers" },
-  { href: "/advertisers", label: "Advertisers" },
-  { href: "/payouts", label: "Payouts by country" },
+  { href: "/offers", label: "Explore" },
+  { href: "/publishers", label: "For Publishers" },
+  { href: "/advertisers", label: "For Brands" },
+  { href: "/payouts", label: "Payouts by Country" },
 ];
 
 export function SiteHeader() {
@@ -19,12 +20,8 @@ export function SiteHeader() {
 
   return (
     <header className="site-header">
-      <div className="stripe" aria-hidden="true" />
       <div className="container">
-        <Link href="/" className="brand" aria-label="Affylitics home">
-          <img src="/logo.png" alt="" width={36} height={36} />
-          <span>Affylitics</span>
-        </Link>
+        <Logo />
         <button
           type="button"
           className="btn ghost small nav-toggle"
@@ -40,6 +37,7 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
+          <span className="sep" aria-hidden="true" />
           <Link href="/login" className="navlink">Sign in</Link>
           <Link href="/signup" className="btn small">Join free</Link>
           <ThemeToggle />

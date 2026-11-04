@@ -21,16 +21,15 @@ export const metadata: Metadata = {
     url: SITE_URL,
     title: `${SITE_NAME}: ${TAGLINE}`,
     description: DESCRIPTION,
-    images: [{ url: "/logo.png", width: 512, height: 512, alt: "Affylitics logo" }],
   },
-  twitter: { card: "summary", title: SITE_NAME, description: DESCRIPTION, images: ["/logo.png"] },
+  twitter: { card: "summary_large_image", title: `${SITE_NAME}: ${TAGLINE}`, description: DESCRIPTION },
   robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf8ff" },
-    { media: "(prefers-color-scheme: dark)", color: "#1f2328" },
+    { media: "(prefers-color-scheme: light)", color: "#f8faff" },
+    { media: "(prefers-color-scheme: dark)", color: "#12132a" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -58,7 +57,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             url: SITE_URL,
             logo: `${SITE_URL}/logo.png`,
             description: DESCRIPTION,
-            sameAs: ["https://affylitics.com"],
           }}
         />
       </body>

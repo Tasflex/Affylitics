@@ -53,7 +53,7 @@ check "click redirects to landing page with aff_click" "$(echo "$LOC" | grep -c 
 post() {
   ts=$(date +%s); body="{\"click_id\":\"$CLICK\",\"external_ref\":\"$1\"}"
   sig=$(printf '%s.%s' "$ts" "$body" | openssl dgst -sha256 -hmac "$2" -hex | awk '{print $2}')
-  curl -s -H "$J" -H "X-Affylitics-Brand: $BID" -H "X-Affylitics-Timestamp: $ts" -H "X-Affylitics-Signature: $sig" $A/api/postback -d "$body"
+  curl -s -H "$J" -H "X-NetAffil-Brand: $BID" -H "X-NetAffil-Timestamp: $ts" -H "X-NetAffil-Signature: $sig" $A/api/postback -d "$body"
 }
 check "postback with bad signature rejected" "$(post order-1 wrongsecret | field 'd.get("error")')" "sign in required"
 check "signed postback records conversion" "$(post order-1 "$SECRET" | field 'd["status"]')" "recorded"

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useId, useMemo, useState } from "react";
 import { allCountries, feeText, KIND_LABEL } from "@/lib/rails";
 
-/** Pick a country, see exactly how you would be paid there. The home page's signature element.
- *  Computes the list itself rather than taking it as props, which would serialize it into the page. */
+/** Pick a country, see how affiliates there withdraw. Computes the list client-side rather than
+ *  taking it as props, which would serialize every country into the page. */
 export function RailFinder({ initial = "KE" }: { initial?: string }) {
   const id = useId();
   const countries = useMemo(() => allCountries(), []);
@@ -13,28 +13,28 @@ export function RailFinder({ initial = "KE" }: { initial?: string }) {
   const country = useMemo(() => countries.find((c) => c.code === code) ?? countries[0], [code, countries]);
 
   return (
-    <section className="finder" aria-labelledby={`${id}-title`}>
+    <section className="finder" aria-labelledby={`${id}-label`}>
       <header>
-        <label htmlFor={`${id}-country`} id={`${id}-title`}>How you get paid in</label>
+        <label htmlFor={`${id}-country`} id={`${id}-label`}>Select your country</label>
         <select id={`${id}-country`} className="input" value={code} onChange={(e) => setCode(e.target.value)}>
           {countries.map((c) => (
             <option key={c.code} value={c.code}>{c.name}</option>
           ))}
         </select>
       </header>
-      <ul aria-live="polite">
+      <ul className="rail-grid" aria-live="polite" aria-label={`Payout options in ${country.name}`}>
         {country.rails.map((r) => (
-          <li key={r.id}>
+          <li key={r.id} className="rail">
+            <span className="rail-kind">{KIND_LABEL[r.kind] ?? r.kind}</span>
             <span className="rail-name">{r.name}</span>
-            <span className="rail-min">from ${r.min_usd}</span>
-            <span className="rail-meta">{KIND_LABEL[r.kind] ?? r.kind} · {r.speed}</span>
-            <span className="rail-meta" style={{ textAlign: "right" }}>{feeText(r)}</span>
+            <span className="rail-min">From ${r.min_usd}</span>
+            <span className="rail-meta">{feeText(r)} · {r.speed}</span>
           </li>
         ))}
       </ul>
       <footer>
-        Paid in {country.currency}.{" "}
-        <Link href={`/payouts/${country.slug}`}>Full guide for {country.name}</Link>
+        <span className="muted">Paid in <strong>{country.currency}</strong></span>
+        <Link href={`/payouts/${country.slug}`}>Full payout guide for {country.name}</Link>
       </footer>
     </section>
   );

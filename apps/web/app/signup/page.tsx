@@ -5,7 +5,7 @@ import { allCountries } from "@/lib/rails";
 
 export const metadata: Metadata = {
   title: "Create your free account",
-  description: "Join Affylitics as a publisher or advertiser. Open to every country we can legally pay.",
+  description: "Join NetAffil free as an affiliate or a brand.",
   alternates: { canonical: "/signup" },
 };
 
@@ -13,8 +13,8 @@ export default function Signup() {
   const countries = allCountries().map(({ code, name }) => ({ code, name }));
   return (
     <div className="container section" style={{ maxWidth: 560 }}>
-      <h1 style={{ fontSize: "2.4rem" }}>Join Affylitics</h1>
-      <p className="muted">Free for publishers. No traffic minimums, no country restrictions.</p>
+      <h1 style={{ fontSize: "2.4rem" }}>Join NetAffil</h1>
+      <p className="muted">Free for affiliates. Brands pay only for results.</p>
       <div className="card" style={{ marginTop: 24 }}>
         <Suspense>
           <AuthForm mode="signup" countries={countries} />

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "./Logo";
 
 export function SiteFooter() {
   const year = new Date().getFullYear();
@@ -7,28 +8,25 @@ export function SiteFooter() {
       <div className="container">
         <div className="footer-grid">
           <div>
-            <Link href="/" className="brand" aria-label="Affylitics home">
-              <img src="/logo.png" alt="" width={36} height={36} />
-              <span>Affylitics</span>
-            </Link>
-            <p className="muted" style={{ marginTop: 12, maxWidth: "40ch" }}>
-              The affiliate network open to every country we can legally pay. Funded offers, local payouts, an honest ledger.
+            <Logo />
+            <p className="muted" style={{ marginTop: 14, maxWidth: "38ch" }}>
+              Connecting brands, empowering affiliates, everywhere. The world is your marketplace.
             </p>
           </div>
           <div>
-            <h2>Earn</h2>
+            <h2>Affiliates</h2>
             <ul>
               <li><Link href="/publishers">For publishers</Link></li>
-              <li><Link href="/offers">Browse offers</Link></li>
+              <li><Link href="/offers">Explore offers</Link></li>
               <li><Link href="/payouts">Payouts by country</Link></li>
             </ul>
           </div>
           <div>
-            <h2>Grow</h2>
+            <h2>Brands</h2>
             <ul>
-              <li><Link href="/advertisers">For advertisers</Link></li>
-              <li><Link href="/signup?role=advertiser">List an offer</Link></li>
-              <li><a href="https://affylitics.com">Reviews blog</a></li>
+              <li><Link href="/advertisers">For brands</Link></li>
+              <li><Link href="/signup?role=advertiser">Launch a campaign</Link></li>
+              <li><Link href="/advertisers#tracking">Tracking &amp; postbacks</Link></li>
             </ul>
           </div>
           <div>
@@ -40,7 +38,10 @@ export function SiteFooter() {
             </ul>
           </div>
         </div>
-        <p className="legal-line">© {year} Affylitics. All rights reserved.</p>
+        <div className="legal-line">
+          <span>© {year} NetAffil. All rights reserved.</span>
+          <span>Brands meet affiliates, in every market.</span>
+        </div>
       </div>
     </footer>
   );

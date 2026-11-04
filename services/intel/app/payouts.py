@@ -71,7 +71,7 @@ async def flutterwave_send(p: dict, amount: float, currency: str) -> str:
                 "currency": currency,
                 "debit_currency": "USD",
                 "beneficiary_name": p["display_name"],
-                "narration": "Affylitics earnings",
+                "narration": "NetAffil earnings",
                 "reference": p["id"],
                 "callback_url": f"{config.WEBHOOK_BASE}/payouts/flutterwave",
             },
@@ -105,7 +105,7 @@ async def paystack_send(p: dict, amount: float, currency: str) -> str:
             "amount": int(round(amount * 100)),  # subunits
             "recipient": rec_body["data"]["recipient_code"],
             "reference": p["id"],
-            "reason": "Affylitics earnings",
+            "reason": "NetAffil earnings",
             "currency": currency,
         })
     body = res.json()
@@ -158,7 +158,7 @@ async def mpesa_send(p: dict, amount: float, currency: str) -> str:
             "Amount": int(round(amount)),
             "PartyA": config.MPESA_SHORTCODE,
             "PartyB": kenyan_msisdn(_detail(p, "phone")),
-            "Remarks": "Affylitics earnings",
+            "Remarks": "NetAffil earnings",
             "QueueTimeOutURL": callback,
             "ResultURL": callback,
             "Occasion": "payout",
@@ -184,7 +184,7 @@ async def paypal_send(p: dict, amount: float, currency: str) -> str:
     async with httpx.AsyncClient(base_url=config.PAYPAL_BASE, timeout=30) as c:
         token = await _paypal_token(c)
         res = await c.post("/v1/payments/payouts", headers={"Authorization": f"Bearer {token}"}, json={
-            "sender_batch_header": {"sender_batch_id": p["id"], "email_subject": "Your Affylitics earnings"},
+            "sender_batch_header": {"sender_batch_id": p["id"], "email_subject": "Your NetAffil earnings"},
             "items": [{
                 "recipient_type": "EMAIL",
                 "amount": {"value": f"{usd:.2f}", "currency": "USD"},

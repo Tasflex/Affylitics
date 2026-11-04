@@ -35,7 +35,7 @@ async def start(user_id: str, email: str, name: str, country: str, amount_cents:
                     "currency": "USD",
                     "redirect_url": return_url,
                     "customer": {"email": email, "name": name},
-                    "customizations": {"title": "Affylitics escrow top-up"},
+                    "customizations": {"title": "NetAffil escrow top-up"},
                     "meta": {"user_id": user_id},
                 },
             )
@@ -56,7 +56,7 @@ async def start(user_id: str, email: str, name: str, country: str, amount_cents:
                 "line_items[0][quantity]": "1",
                 "line_items[0][price_data][currency]": "usd",
                 "line_items[0][price_data][unit_amount]": str(amount_cents),
-                "line_items[0][price_data][product_data][name]": "Affylitics escrow top-up",
+                "line_items[0][price_data][product_data][name]": "NetAffil escrow top-up",
             },
         )
         res.raise_for_status()

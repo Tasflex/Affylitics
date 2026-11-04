@@ -174,16 +174,16 @@ struct PostbackBody {
 }
 
 /// Records a conversion. The advertiser signs `"{timestamp}.{raw body}"` with HMAC-SHA256 using
-/// their brand's postback secret, and sends X-Affylitics-Brand, X-Affylitics-Timestamp and
-/// X-Affylitics-Signature (hex).
+/// their brand's postback secret, and sends X-NetAffil-Brand, X-NetAffil-Timestamp and
+/// X-NetAffil-Signature (hex).
 pub async fn postback(State(state): State<AppState>, headers: HeaderMap, body: Bytes) -> AppResult<Json<Value>> {
     limit(&state, &headers, "postback", 600, 60)?;
     let h = |name: &str| headers.get(name).and_then(|v| v.to_str().ok()).map(str::to_string);
-    let brand_id: Uuid = h("x-affylitics-brand")
+    let brand_id: Uuid = h("x-netaffil-brand")
         .and_then(|v| v.parse().ok())
         .ok_or(AppError::Unauthorized)?;
-    let ts: i64 = h("x-affylitics-timestamp").and_then(|v| v.parse().ok()).ok_or(AppError::Unauthorized)?;
-    let sig = h("x-affylitics-signature").and_then(|v| hex::decode(v).ok()).ok_or(AppError::Unauthorized)?;
+    let ts: i64 = h("x-netaffil-timestamp").and_then(|v| v.parse().ok()).ok_or(AppError::Unauthorized)?;
+    let sig = h("x-netaffil-signature").and_then(|v| hex::decode(v).ok()).ok_or(AppError::Unauthorized)?;
     if (Utc::now().timestamp() - ts).abs() > 300 {
         return Err(AppError::BadRequest("timestamp outside the 5-minute window".into()));
     }

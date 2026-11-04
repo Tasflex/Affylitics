@@ -5,7 +5,7 @@ import { allCountries, REGION_NAMES } from "@/lib/rails";
 export const metadata: Metadata = {
   title: "Affiliate payouts in every country",
   description:
-    "See how Affylitics pays affiliates in each country: M-Pesa, MTN MoMo, Airtel Money, UPI, PIX, SEPA, ACH, PayPal, Payoneer and USDC, with minimums and fees.",
+    "See how NetAffil pays affiliates in each country: M-Pesa, MTN MoMo, Airtel Money, UPI, PIX, SEPA, ACH, PayPal, Payoneer and USDC, with minimums and fees.",
   alternates: { canonical: "/payouts" },
 };
 

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Icon } from "@/components/Icons";
+import { JsonLd } from "@/components/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Reach affiliates in every market",
+  title: "For brands: launch an affiliate program that reaches every market",
   description:
-    "List your product on Affylitics and reach publishers across Africa, Asia, Latin America and beyond. Pay only for results, from an escrow you control, with server-to-server tracking.",
+    "Launch CPS, CPA or CPL affiliate campaigns on NetAffil. Reach publishers worldwide, pay only for confirmed results from a funded escrow, and track with signed server-to-server postbacks.",
   alternates: { canonical: "/advertisers" },
 };
 
@@ -14,51 +16,94 @@ sig=$(printf '%s.%s' "$ts" "$body" | openssl dgst -sha256 -hmac "$POSTBACK_SECRE
 
 curl https://netaffil.com/api/postback \\
   -H "Content-Type: application/json" \\
-  -H "X-Affylitics-Brand: $BRAND_ID" \\
-  -H "X-Affylitics-Timestamp: $ts" \\
-  -H "X-Affylitics-Signature: $sig" \\
+  -H "X-NetAffil-Brand: $BRAND_ID" \\
+  -H "X-NetAffil-Timestamp: $ts" \\
+  -H "X-NetAffil-Signature: $sig" \\
   -d "$body"`;
+
+const FAQ = [
+  { q: "What does NetAffil cost?", a: "No setup or monthly fees. You pay the commission you set plus a 20% platform fee, only on confirmed conversions." },
+  { q: "How do I control spend?", a: "Campaigns draw from an escrow you top up. If it runs low, your campaigns pause automatically, so you never owe more than you funded." },
+  { q: "What if a customer refunds?", a: "Every campaign has a hold period you choose. Reject a conversion during it, with a reason, and the commission and fee return to your escrow." },
+  { q: "Can I target specific countries?", a: "Yes. Limit a campaign to the countries where you sell. Affiliates promoting it can be anywhere, because they reach audiences across borders." },
+];
 
 export default function Advertisers() {
   return (
-    <div className="container section">
-      <p className="eyebrow">For advertisers</p>
-      <h1>Thousands of new markets, paid on results</h1>
-      <p className="lede">
-        Affylitics publishers write in local languages, run local communities and reach buyers the big networks never
-        recruited. You set the commission, fund an escrow, and pay only when a sale or lead is confirmed.
-      </p>
-      <div className="row" style={{ margin: "24px 0 48px" }}>
-        <Link href="/signup?role=advertiser" className="btn">List your first offer</Link>
-      </div>
+    <>
+      <section className="page-hero dark">
+        <div className="container">
+          <p className="eyebrow">For brands &amp; advertisers</p>
+          <h1>Let people sell <span className="grad">your products.</span></h1>
+          <p className="lede">
+            Reach new markets through affiliates who influence buying decisions: local creators, niche bloggers,
+            community leaders and comparison sites. You set the commission. You pay only for results.
+          </p>
+          <div className="row" style={{ marginTop: 28 }}>
+            <Link href="/signup?role=advertiser" className="btn warm lg">Launch a campaign <Icon.arrow /></Link>
+            <Link href="#tracking" className="btn outline-light lg">See how tracking works</Link>
+          </div>
+        </div>
+      </section>
 
-      <ol className="steps">
-        <li><h3>Create your brand</h3><p className="muted">Add your website and get a postback secret for server-to-server tracking.</p></li>
-        <li><h3>Set the offer</h3><p className="muted">Fixed per sale or lead, or a revenue share. Choose hold and cookie windows.</p></li>
-        <li><h3>Fund escrow</h3><p className="muted">Top up by card, mobile money or bank. Offers go live once funded.</p></li>
-        <li><h3>Confirm conversions</h3><p className="muted">Send a signed postback per sale. Reject refunds during the hold period.</p></li>
-      </ol>
+      <section className="section">
+        <div className="container">
+          <div className="grid cols-4">
+            <div className="trust-card"><span className="icon-tile orange"><Icon.megaphone /></span><h3>Flexible campaigns</h3><p>Revenue share per sale, a fixed amount per action, or per lead. Your rules, your markets.</p></div>
+            <div className="trust-card"><span className="icon-tile orange"><Icon.globe /></span><h3>Every market</h3><p>Affiliates from every region, writing in their own languages for their own audiences.</p></div>
+            <div className="trust-card"><span className="icon-tile"><Icon.chart /></span><h3>Live performance</h3><p>Clicks, conversions and costs per campaign, with the conversion log you can audit.</p></div>
+            <div className="trust-card"><span className="icon-tile"><Icon.shield /></span><h3>Spend you control</h3><p>A funded escrow, automatic pausing, hold periods and fraud scoring on every click.</p></div>
+          </div>
+        </div>
+      </section>
 
-      <h2 style={{ marginTop: 56 }}>Pricing</h2>
-      <div className="prose">
-        <p>
-          A platform fee of 20% is added on top of each commission you pay out. No setup fee, no monthly minimum. Unused
-          escrow stays yours. If your escrow runs out, your offers pause automatically so publishers never send traffic
-          that can&apos;t be paid.
-        </p>
-      </div>
+      <section className="section surface">
+        <div className="container">
+          <div className="section-head"><p className="eyebrow">Get started</p><h2>Live in four steps</h2></div>
+          <ol className="steps">
+            <li><h3>Add your brand</h3><p className="muted">Your website and a postback secret for server-to-server tracking.</p></li>
+            <li><h3>Create a campaign</h3><p className="muted">Commission type and rate, cookie window, hold period, target countries.</p></li>
+            <li><h3>Fund escrow</h3><p className="muted">Top up by card, mobile money or bank. Campaigns go live once funded.</p></li>
+            <li><h3>Confirm conversions</h3><p className="muted">Send a signed postback per sale. Reject refunds during the hold period.</p></li>
+          </ol>
+        </div>
+      </section>
 
-      <h2 style={{ marginTop: 40 }}>Tracking in one request</h2>
-      <div className="prose">
-        <p>
-          Each click arrives on your landing page with an <code className="code">aff_click</code> parameter. Store it with
-          the order. When the order is confirmed, sign the JSON body with your postback secret (HMAC-SHA256 over
-          <code className="code">timestamp.body</code>) and send it to us:
-        </p>
-      </div>
-      <pre className="card code" style={{ overflowX: "auto", whiteSpace: "pre" }} tabIndex={0} aria-label="Example postback request">
-        {SIGNATURE_EXAMPLE}
-      </pre>
-    </div>
+      <section className="section" id="tracking">
+        <div className="container payout-grid" style={{ alignItems: "start" }}>
+          <div>
+            <p className="eyebrow">Tracking</p>
+            <h2>One signed request per conversion</h2>
+            <p className="lede">
+              Each click lands on your site with an <code className="code">aff_click</code> parameter. Store it with the
+              order; when the order is confirmed, sign the body with your postback secret (HMAC-SHA256 over
+              <code className="code">timestamp.body</code>) and send it to NetAffil.
+            </p>
+            <ul className="check-list">
+              <li>Duplicates are ignored, so retries are safe</li>
+              <li>Requests older than 5 minutes are rejected</li>
+              <li>Works from any backend language</li>
+            </ul>
+          </div>
+          <pre className="card code" style={{ overflowX: "auto", whiteSpace: "pre", margin: 0, fontSize: ".85rem" }} tabIndex={0} aria-label="Example postback request">
+            {SIGNATURE_EXAMPLE}
+          </pre>
+        </div>
+      </section>
+
+      <section className="section tight">
+        <div className="container" style={{ maxWidth: 860 }}>
+          <h2>Brand questions</h2>
+          <div className="faq">
+            {FAQ.map((f) => <details key={f.q}><summary>{f.q}</summary><p>{f.a}</p></details>)}
+          </div>
+          <div className="row" style={{ marginTop: 32 }}>
+            <Link href="/signup?role=advertiser" className="btn lg">Advertise with NetAffil <Icon.arrow /></Link>
+          </div>
+        </div>
+      </section>
+
+      <JsonLd data={{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }} />
+    </>
   );
 }

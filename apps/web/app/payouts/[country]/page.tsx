@@ -30,7 +30,7 @@ export default async function CountryPayouts({ params }: Props) {
   const first = c.rails[0];
   const faq = [
     {
-      q: `Can I join Affylitics from ${c.name}?`,
+      q: `Can I join NetAffil from ${c.name}?`,
       a: `Yes. Publishers in ${c.name} can sign up, promote offers and earn without any country restriction.`,
     },
     {

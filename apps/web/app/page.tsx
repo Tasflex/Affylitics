@@ -1,128 +1,269 @@
 import Link from "next/link";
+import { HeroScene } from "@/components/HeroScene";
+import { Icon } from "@/components/Icons";
 import { JsonLd } from "@/components/JsonLd";
+import { EXAMPLE_OFFERS, OfferCard } from "@/components/OfferCard";
 import { RailFinder } from "@/components/RailFinder";
-import { allCountries } from "@/lib/rails";
+import { serverApi, type Offer } from "@/lib/api";
+import { allCountries, REGION_NAMES } from "@/lib/rails";
+
+export const revalidate = 300;
 
 const FAQ = [
   {
-    q: "Can I join from Kenya, Nigeria, Ghana or anywhere in Africa?",
-    a: "Yes. Affylitics accepts publishers from every country we are legally allowed to pay. We pay out through M-Pesa, MTN MoMo, Airtel Money, Orange Money, Wave, local bank transfer and more, with minimums from $2.",
+    q: "Who can join NetAffil?",
+    a: "Brands of any size that sell online, and affiliates anywhere in the world: bloggers, creators, community admins, comparison and coupon sites. Joining is free for affiliates.",
   },
   {
-    q: "Do I need to verify my identity to start?",
-    a: "No. You can sign up, create links and earn straight away. We only ask you to verify your identity before your first payout, using an ID you already have, such as your national ID card.",
+    q: "How do affiliates get paid?",
+    a: "Through the methods that work in your country: mobile money such as M-Pesa, MTN MoMo and Airtel Money, instant bank rails such as UPI, PIX and SEPA, local bank transfer, PayPal, Payoneer or USDC. Each country page lists minimums, fees and timing.",
   },
   {
-    q: "What happens if an advertiser doesn't pay?",
-    a: "That can't happen here. Advertisers fund an escrow balance before their offers go live, and each commission is set aside from that escrow the moment a sale is recorded.",
+    q: "How are commissions protected?",
+    a: "Brands fund an escrow balance before a campaign goes live. When a sale is confirmed, the commission is set aside from that escrow immediately, and becomes withdrawable after the campaign's hold period.",
   },
   {
-    q: "How much does Affylitics take from my commission?",
-    a: "Nothing. You earn the full rate shown on the offer. Advertisers pay our fee on top. Payout transfer fees are charged at cost and shown before you withdraw.",
+    q: "What does it cost brands?",
+    a: "No setup or monthly fees. Brands pay the commission they choose plus a 20% platform fee, only on confirmed results.",
   },
   {
-    q: "Which countries can't join?",
-    a: "Only those under comprehensive international sanctions (currently Cuba, Iran, North Korea and Syria), because the law bars us from paying them. A few others are paid after a manual compliance review.",
+    q: "How is tracking done?",
+    a: "Every click gets a unique ID. Brands confirm conversions with a signed server-to-server postback, so results can't be faked from the browser, and both sides see the same numbers.",
   },
 ];
 
-export default function Home() {
+export default async function Home() {
   const countries = allCountries();
+  const live = ((await serverApi<Offer[]>("/api/offers", { revalidate: 300 })).data ?? []).slice(0, 8);
+  const offers = live.length >= 4 ? live : [...live, ...EXAMPLE_OFFERS.slice(0, 4 - live.length)];
+  const byRegion = REGION_NAMES.map((r) => ({ region: r, list: countries.filter((c) => c.region === r) }));
+
   return (
     <>
+      {/* 1–2 · Hero */}
       <section className="hero">
         <div className="container hero-grid">
           <div>
             <p className="eyebrow">Affiliate marketing without borders</p>
             <h1>
-              Earn from great products. <span className="mark">Get paid where you live.</span>
+              The world is <span className="grad">your marketplace.</span>
             </h1>
+            <p className="tagline"><span>Connect</span><span>Promote</span><span>Earn</span><span>Get paid</span></p>
             <p className="lede">
-              Other networks turn you away because of your country. Affylitics welcomes publishers everywhere, guarantees
-              every commission with advertiser escrow, and pays you by M-Pesa, mobile money, UPI, PIX, bank or USDC.
+              NetAffil connects brands with affiliates worldwide. Brands reach new markets through people who influence
+              buying decisions. Affiliates discover great products, earn commissions and withdraw through payment methods
+              that work in their country.
             </p>
             <div className="actions">
-              <Link href="/signup" className="btn">Start earning free</Link>
-              <Link href="/advertisers" className="btn secondary">I want affiliates</Link>
+              <Link href="/publishers" className="btn lg">I&apos;m an affiliate <Icon.arrow /></Link>
+              <Link href="/advertisers" className="btn lg ghost">I&apos;m a brand <Icon.arrow /></Link>
             </div>
-            <div className="proof">
-              <div><strong>{countries.length}</strong> countries paid</div>
-              <div><strong>$2</strong> lowest payout</div>
-              <div><strong>100%</strong> of your commission</div>
+            <div className="hero-points">
+              <div className="hero-point">
+                <span className="icon-tile"><Icon.globe /></span>
+                <div><strong>Global opportunities</strong><span>Connect across markets and borders.</span></div>
+              </div>
+              <div className="hero-point">
+                <span className="icon-tile orange"><Icon.wallet /></span>
+                <div><strong>Local payments</strong><span>Payout options that fit {countries.length} countries.</span></div>
+              </div>
             </div>
+          </div>
+          <HeroScene />
+        </div>
+      </section>
+
+      {/* 3 · Two audience pathways */}
+      <section className="section" aria-labelledby="paths">
+        <div className="container">
+          <div className="section-head center">
+            <p className="eyebrow">Two sides, one marketplace</p>
+            <h2 id="paths">Brands find people who sell. People find brands that pay.</h2>
+          </div>
+          <div className="paths">
+            <article className="path pub">
+              <span className="who">For affiliates &amp; publishers</span>
+              <h3 className="path-title">Turn your audience into income.</h3>
+              <p>Find products worth promoting, join campaigns from brands around the world, and earn from the traffic you already have.</p>
+              <ul className="check-list">
+                <li>Browse funded affiliate offers</li>
+                <li>Compare commissions, cookie windows and markets</li>
+                <li>Track every click, sale and payout in real time</li>
+                <li>Withdraw with local payment options</li>
+              </ul>
+              <Link href="/publishers" className="btn">Become a publisher <Icon.arrow /></Link>
+            </article>
+            <article className="path brand-path">
+              <span className="who">For brands &amp; advertisers</span>
+              <h3 className="path-title">Let people sell your products.</h3>
+              <p>Connect with affiliates who introduce your products to new audiences and new markets, and pay only for results.</p>
+              <ul className="check-list">
+                <li>Launch CPS, CPA or CPL campaigns in minutes</li>
+                <li>Reach publishers in every region</li>
+                <li>Monitor clicks, conversions and costs</li>
+                <li>Control spend with a funded escrow</li>
+              </ul>
+              <Link href="/advertisers" className="btn warm">Advertise with NetAffil <Icon.arrow /></Link>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      {/* 4 · Payment network */}
+      <section className="section surface" aria-labelledby="payouts">
+        <div className="container payout-grid">
+          <div>
+            <p className="eyebrow">Global payout network</p>
+            <h2 id="payouts">Earn globally. <span className="grad">Withdraw locally.</span></h2>
+            <p className="lede">
+              Where you live shouldn&apos;t decide how you get paid. Every country has its own way of moving money,
+              and NetAffil pays out through the ones people actually use.
+            </p>
+            <ul className="check-list" style={{ marginTop: 24 }}>
+              <li>Mobile money from $2, including M-Pesa, MTN MoMo, Airtel Money, Orange Money and Wave</li>
+              <li>Instant bank rails such as UPI, PIX, SPEI, SEPA and Faster Payments</li>
+              <li>PayPal, Payoneer and USDC as global options</li>
+              <li>Minimums, fees and timing shown before you withdraw</li>
+            </ul>
+            <Link href="/payouts" className="btn secondary">Payouts by country <Icon.arrow /></Link>
           </div>
           <RailFinder />
         </div>
       </section>
 
-      <section className="section" aria-labelledby="how">
+      {/* 5 · Featured offers */}
+      <section className="section" aria-labelledby="offers">
         <div className="container">
-          <p className="eyebrow">How it works</p>
-          <h2 id="how">From link to local payout in four steps</h2>
-          <ol className="steps" style={{ marginTop: 28 }}>
-            <li>
-              <h3>Join in two minutes</h3>
-              <p className="muted">Email, password, country. No website traffic thresholds and no approval queue.</p>
-            </li>
-            <li>
-              <h3>Pick funded offers</h3>
-              <p className="muted">Every live offer is backed by money the advertiser has already deposited.</p>
-            </li>
-            <li>
-              <h3>Share your link</h3>
-              <p className="muted">Blog, YouTube, WhatsApp, TikTok. We track clicks and sales and show every one.</p>
-            </li>
-            <li>
-              <h3>Withdraw locally</h3>
-              <p className="muted">After the hold period, cash out to the rail you already use, in your own currency.</p>
-            </li>
-          </ol>
+          <div className="spread" style={{ marginBottom: 32, alignItems: "flex-end" }}>
+            <div>
+              <p className="eyebrow">Marketplace</p>
+              <h2 id="offers" style={{ margin: 0 }}>Explore affiliate offers</h2>
+            </div>
+            <Link href="/offers" className="btn ghost">View all offers <Icon.arrow /></Link>
+          </div>
+          <ul className="offer-grid">
+            {offers.map((o) => <OfferCard key={o.slug ?? o.title} o={o} />)}
+          </ul>
+          {live.length < 4 && (
+            <p className="muted" style={{ marginTop: 16, fontSize: ".9rem" }}>
+              Cards marked “Example offer” illustrate the kinds of campaigns on NetAffil; they are not live campaigns.
+            </p>
+          )}
         </div>
       </section>
 
-      <section className="section" style={{ background: "var(--card)", borderBlock: "1px solid var(--border)" }} aria-labelledby="why">
+      {/* 6 · How it works */}
+      <section className="section surface" aria-labelledby="how">
         <div className="container">
-          <p className="eyebrow">Why Affylitics</p>
-          <h2 id="why">Built for the publishers the big networks ignore</h2>
-          <div className="grid cols-3" style={{ marginTop: 28 }}>
-            <div>
-              <h3>No country gatekeeping</h3>
-              <p className="muted">
-                Sign-up is open worldwide. The only countries we can&apos;t accept are those international sanctions law forbids us to pay.
-              </p>
+          <div className="section-head center">
+            <p className="eyebrow">How it works</p>
+            <h2 id="how">From campaign to commission</h2>
+          </div>
+          <div className="how">
+            <div className="how-col brand-col">
+              <h3><span className="icon-tile orange" style={{ margin: 0, width: 40, height: 40 }}><Icon.megaphone /></span>For brands</h3>
+              <ol className="timeline">
+                <li><strong>Create your campaign</strong><span>Set the commission, cookie window, hold period and target markets.</span></li>
+                <li><strong>Fund your escrow</strong><span>Top up by card, mobile money or bank. Campaigns go live once funded.</span></li>
+                <li><strong>Affiliates promote you</strong><span>Publishers pick up your offer and send you qualified traffic.</span></li>
+                <li><strong>Pay for results only</strong><span>Confirm sales by postback; reject refunds during the hold period.</span></li>
+              </ol>
             </div>
-            <div>
-              <h3>Escrow-backed commissions</h3>
-              <p className="muted">
-                Advertisers pre-fund. When a sale lands, your commission moves out of their escrow into your balance immediately.
-              </p>
-            </div>
-            <div>
-              <h3>Earn first, verify later</h3>
-              <p className="muted">
-                Identity checks happen at your first withdrawal, using local IDs like a Kenyan ID, NIN or Ghana Card.
-              </p>
-            </div>
-            <div>
-              <h3>Local rails, small minimums</h3>
-              <p className="muted">Mobile money from $2. No more waiting months to reach a $100 threshold.</p>
-            </div>
-            <div>
-              <h3>An open ledger</h3>
-              <p className="muted">Every cent in your balance is backed by a ledger entry you can inspect, not a number we made up.</p>
-            </div>
-            <div>
-              <h3>Accessible by design</h3>
-              <p className="muted">Keyboard friendly, screen-reader tested patterns, high contrast and light on mobile data.</p>
+            <div className="how-col">
+              <h3><span className="icon-tile" style={{ margin: 0, width: 40, height: 40 }}><Icon.users /></span>For affiliates</h3>
+              <ol className="timeline">
+                <li><strong>Join free</strong><span>Sign up in two minutes from any country.</span></li>
+                <li><strong>Pick an offer</strong><span>Compare rates, cookie windows and target markets.</span></li>
+                <li><strong>Share your link</strong><span>Blog, video, social or messaging: every click is tracked.</span></li>
+                <li><strong>Withdraw locally</strong><span>After the hold period, cash out the way you prefer.</span></li>
+              </ol>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="section" aria-labelledby="faq">
+      {/* 7 · Trust */}
+      <section className="section" aria-labelledby="trust">
         <div className="container">
-          <h2 id="faq">Questions people ask</h2>
-          <div className="faq prose">
+          <div className="section-head">
+            <p className="eyebrow">Trust &amp; protection</p>
+            <h2 id="trust">A better relationship between brands and affiliates</h2>
+          </div>
+          <div className="grid cols-4">
+            <div className="trust-card">
+              <span className="icon-tile"><Icon.shield /></span>
+              <h3>Protected commissions</h3>
+              <p>Campaigns are funded up front, and each confirmed commission is reserved from escrow the moment it&apos;s recorded.</p>
+            </div>
+            <div className="trust-card">
+              <span className="icon-tile"><Icon.chart /></span>
+              <h3>Transparent tracking</h3>
+              <p>Unique click IDs and signed server-to-server postbacks. Both sides see the same clicks, conversions and approvals.</p>
+            </div>
+            <div className="trust-card">
+              <span className="icon-tile orange"><Icon.badge /></span>
+              <h3>Verified participants</h3>
+              <p>Identity verification before payouts, fraud scoring on traffic, and verification badges for brands.</p>
+            </div>
+            <div className="trust-card">
+              <span className="icon-tile orange"><Icon.receipt /></span>
+              <h3>Transparent payouts</h3>
+              <p>Fees, minimums and timing shown up front, and an itemised ledger behind every balance.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 8 · Global reach */}
+      <section className="section surface" aria-labelledby="reach">
+        <div className="container">
+          <div className="section-head">
+            <p className="eyebrow">Global reach</p>
+            <h2 id="reach">{countries.length} countries. One marketplace.</h2>
+            <p className="lede">Affiliates and brands from every region, each with payout methods that suit their market.</p>
+          </div>
+          <div className="regions">
+            {byRegion.map(({ region, list }) => (
+              <Link key={region} href="/payouts" className="region">
+                <div className="count">{list.length}</div>
+                <div className="name">{region}</div>
+                <div className="eg">{list.slice(0, 3).map((c) => c.name).join(", ")}…</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 9 · Founding partners (instead of testimonials we don't have yet) */}
+      <section className="section" aria-labelledby="founding">
+        <div className="container">
+          <div className="band band-grid">
+            <div>
+              <p className="eyebrow">Founding partners</p>
+              <h2 id="founding">Be among the first brands and affiliates on NetAffil.</h2>
+              <p className="lede">
+                We&apos;re onboarding our first campaigns now. Early partners get hands-on help and a direct line to the team
+                shaping the platform.
+              </p>
+              <div className="row" style={{ marginTop: 24 }}>
+                <Link href="/signup?role=advertiser" className="btn warm lg">Launch a campaign <Icon.arrow /></Link>
+                <Link href="/signup?role=publisher" className="btn outline-light lg">Join as an affiliate</Link>
+              </div>
+            </div>
+            <div>
+              <div className="perk"><span aria-hidden="true">✦</span><div><strong>Personal onboarding</strong>Help setting up tracking and your first campaign.</div></div>
+              <div className="perk"><span aria-hidden="true">✦</span><div><strong>Featured placement</strong>Early campaigns appear first in the marketplace.</div></div>
+              <div className="perk"><span aria-hidden="true">✦</span><div><strong>Shape the roadmap</strong>Tell us which markets and payout methods to add next.</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="section tight" aria-labelledby="faq">
+        <div className="container" style={{ maxWidth: 860 }}>
+          <h2 id="faq">Questions, answered</h2>
+          <div className="faq">
             {FAQ.map((f) => (
               <details key={f.q}>
                 <summary>{f.q}</summary>
@@ -130,9 +271,17 @@ export default function Home() {
               </details>
             ))}
           </div>
-          <div className="row" style={{ marginTop: 32 }}>
-            <Link href="/signup" className="btn">Create your free account</Link>
-            <Link href="/payouts" className="btn ghost">See every payout country</Link>
+        </div>
+      </section>
+
+      {/* 10 · Final CTA */}
+      <section className="section" aria-labelledby="cta" style={{ paddingTop: 40 }}>
+        <div className="container" style={{ textAlign: "center" }}>
+          <h2 id="cta">Your location is not your limitation.</h2>
+          <p className="lede" style={{ marginInline: "auto" }}>Join free and start connecting with brands and affiliates across the world.</p>
+          <div className="row" style={{ justifyContent: "center", marginTop: 24 }}>
+            <Link href="/signup?role=publisher" className="btn lg">Join as an affiliate</Link>
+            <Link href="/signup?role=advertiser" className="btn lg ghost">Join as a brand</Link>
           </div>
         </div>
       </section>
