@@ -142,6 +142,55 @@ check "reset token is single-use" "$(code -H "$O" -H "$J" $A/api/auth/reset -d '
 token_for e2e-google-reset reset g@e2e.test
 check "Google-only account can add a password" "$( (code -H "$O" -H "$J" $A/api/auth/reset -d '{"token":"e2e-google-reset","password":"google user password"}'; code -H "$O" -H "$J" $A/api/auth/login -d '{"email":"g@e2e.test","password":"google user password"}') | tr -d '\n')" "200200"
 
+# Admin console (Amina becomes staff; Wanjiru the publisher signs in again after her reset)
+check "non-admin gets 404 from admin API" "$(code -H "Cookie: aff_session=$NEW" $A/api/admin/stats)" "404"
+psql "$TEST_DB" -qc "UPDATE users SET is_admin = true WHERE email = 'new@e2e.test'"
+ADM="Cookie: aff_session=$NEW"
+curl -s -D /tmp/h5 -o /dev/null -H "$O" -H "$J" $A/api/auth/login -d '{"email":"pub@e2e.test","password":"brand new password 1"}'
+PUB=$(cookie /tmp/h5)
+PUBID=$(curl -s -H "Cookie: aff_session=$PUB" $A/api/me | field 'd["id"]')
+NEWID=$(curl -s -H "$ADM" $A/api/me | field 'd["id"]')
+check "admin stats load" "$(curl -s -H "$ADM" $A/api/admin/stats | field 'd["publishers"] >= 2 and d["advertisers"] >= 1')" "True"
+check "admin can search users" "$(curl -s -H "$ADM" "$A/api/admin/users?q=pub@e2e" | field 'd["total"]')" "1"
+check "admin can't change own status" "$(code -H "$O" -H "$J" -H "$ADM" $A/api/admin/users/$NEWID/status -d '{"status":"suspended","reason":"testing self"}')" "400"
+check "suspend needs a reason" "$(code -H "$O" -H "$J" -H "$ADM" $A/api/admin/users/$PUBID/status -d '{"status":"suspended","reason":""}')" "400"
+check "admin suspends a user" "$(code -H "$O" -H "$J" -H "$ADM" $A/api/admin/users/$PUBID/status -d '{"status":"suspended","reason":"e2e fraud check"}')" "200"
+check "suspended user is signed out" "$(code -H "Cookie: aff_session=$PUB" $A/api/me)" "401"
+check "suspended user cannot sign in" "$(code -H "$O" -H "$J" $A/api/auth/login -d '{"email":"pub@e2e.test","password":"brand new password 1"}')" "403"
+check "admin reactivates the user" "$(code -H "$O" -H "$J" -H "$ADM" $A/api/admin/users/$PUBID/status -d '{"status":"active","reason":"cleared after review"}')" "200"
+curl -s -D /tmp/h6 -o /dev/null -H "$O" -H "$J" $A/api/auth/login -d '{"email":"pub@e2e.test","password":"brand new password 1"}'
+PUB=$(cookie /tmp/h6)
+check "admin verifies a brand" "$(code -H "$O" -H "$J" -H "$ADM" $A/api/admin/brands/$BID/verify -d '{"verified":true}')" "200"
+check "brand shows as verified" "$(curl -s -H "$ADM" $A/api/admin/brands | field '[b["verified"] for b in d if b["id"] == "'$BID'"][0]')" "True"
+check "manual escrow credit" "$(curl -s -H "$O" -H "$J" -H "$ADM" $A/api/admin/escrow/credit -d "{\"user_id\":\"$ADVID\",\"amount_cents\":2500,\"reference\":\"BANK-001\"}" | field 'd["status"]')" "credited"
+check "manual escrow credit is idempotent" "$(curl -s -H "$O" -H "$J" -H "$ADM" $A/api/admin/escrow/credit -d "{\"user_id\":\"$ADVID\",\"amount_cents\":2500,\"reference\":\"BANK-001\"}" | field 'd["status"]')" "duplicate"
+check "escrow = 4400 + 2500" "$(curl -s -H "Cookie: aff_session=$ADV" $A/api/me | field 'd["balances"]["escrow_cents"]')" "6900"
+post order-2 "$SECRET" >/dev/null
+CONV2=$(psql "$TEST_DB" -tAc "SELECT id FROM conversions WHERE external_ref = 'order-2'" | head -1)
+check "admin rejects a pending conversion" "$(code -H "$O" -H "$J" -H "$ADM" $A/api/admin/conversions/$CONV2/reject -d '{"reason":"duplicate order detected"}')" "200"
+check "affiliate sees the rejection reason" "$(curl -s -H "Cookie: aff_session=$PUB" $A/api/conversions | field '[c["reject_reason"] for c in d if c["external_ref"] == "order-2"][0]')" "duplicate order detected"
+check "rejection refunds escrow" "$(curl -s -H "Cookie: aff_session=$ADV" $A/api/me | field 'd["balances"]["escrow_cents"]')" "6900"
+PAY2=$(curl -s -H "$O" -H "$J" -H "Cookie: aff_session=$PUB" $A/api/payouts -d "{\"method_id\":\"$MID\",\"amount_cents\":200,\"idempotency_key\":\"k2\"}" | field 'd["id"]')
+check "payout queued leaves available 0" "$(curl -s -H "Cookie: aff_session=$PUB" $A/api/me | field 'd["balances"]["available_cents"]')" "0"
+check "marking paid needs a provider reference" "$(code -H "$O" -H "$J" -H "$ADM" $A/api/admin/payouts/$PAY2/settle -d '{"status":"paid","reason":"sent by hand"}')" "400"
+check "admin marks a payout failed" "$(code -H "$O" -H "$J" -H "$ADM" $A/api/admin/payouts/$PAY2/settle -d '{"status":"failed","reason":"wrong phone number"}')" "200"
+check "failed payout refunds the affiliate" "$(curl -s -H "Cookie: aff_session=$PUB" $A/api/me | field 'd["balances"]["available_cents"]')" "200"
+check "ledger still sums to zero after admin actions" "$(psql "$TEST_DB" -tAc 'SELECT SUM(amount_cents) FROM ledger_entries')" "0"
+check "staff actions are audited" "$(psql "$TEST_DB" -tAc "SELECT COUNT(DISTINCT action) FROM audit_log WHERE action LIKE 'admin.%'")" "6"
+
+# Website verification
+check "localhost can't be added" "$(code -H "$O" -H "$J" -H "Cookie: aff_session=$PUB" $A/api/sites -d '{"url":"http://localhost"}')" "400"
+SITE=$(curl -s -H "$O" -H "$J" -H "Cookie: aff_session=$PUB" $A/api/sites -d '{"url":"example.com/some/page"}')
+check "site added with a verification token" "$(echo "$SITE" | field 'd["url"] + "|" + str(d["token"].startswith("na-"))')" "https://example.com/|True"
+SID=$(echo "$SITE" | field 'd["id"]')
+check "same site can't be added twice" "$(code -H "$O" -H "$J" -H "Cookie: aff_session=$PUB" $A/api/sites -d '{"url":"https://www.example.com"}')" "409"
+check "real site without the tag is not verified" "$(curl -s -H "$O" -H "$J" -H "Cookie: aff_session=$PUB" $A/api/sites/$SID/verify -d '{}' | field 'str(d["verified"]) + "|" + str("couldn" in d["error"])')" "False|True"
+for internal in "http://127.0.0.1" "http://169.254.169.254" "http://10.0.0.1"; do
+  IID=$(curl -s -H "$O" -H "$J" -H "Cookie: aff_session=$PUB" $A/api/sites -d "{\"url\":\"$internal\"}" | field 'd["id"]')
+  check "internal address $internal refused" "$(curl -s -H "$O" -H "$J" -H "Cookie: aff_session=$PUB" $A/api/sites/$IID/verify -d '{}' | field 'd["error"]')" "that address doesn't point to a public website"
+done
+check "other users can't verify your site" "$(code -H "$O" -H "$J" -H "$ADM" $A/api/sites/$SID/verify -d '{}')" "404"
+
 kill $APIPID 2>/dev/null; wait $APIPID 2>/dev/null
 psql "$BASE_DB" -qc "DROP DATABASE affylitics_e2e" && echo "test database dropped"
 echo "RESULT: $pass passed, $fail failed"

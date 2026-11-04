@@ -12,7 +12,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!me.onboarded) redirect("/onboarding");
   return (
     <div className="container dash">
-      <DashNav role={me.role} name={me.display_name} />
+      <DashNav role={me.role} name={me.display_name} isAdmin={me.is_admin} />
       <div>
         {!me.email_verified && <VerifyBanner email={me.email} />}
         {children}

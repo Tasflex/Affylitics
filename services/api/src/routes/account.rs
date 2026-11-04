@@ -191,6 +191,7 @@ pub async fn me(State(state): State<AppState>, user: CurrentUser) -> AppResult<J
         "country": user.country,
         "kyc_tier": user.kyc_tier,
         "email_verified": user.email_verified,
+        "is_admin": user.is_admin,
         "onboarded": onboarded,
         "has_password": has_password,
         "profile": profile,

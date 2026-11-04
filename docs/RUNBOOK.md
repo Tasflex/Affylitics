@@ -87,3 +87,16 @@ Aiven server and drops it afterwards. Needs `postgresql-client`.
 
 Accounts are matched by Google account ID, then by verified email, so an existing email/password
 user who signs in with Google with the same address keeps the same account.
+
+## Admin console
+
+`https://netaffil.com/admin` is visible only to accounts with `is_admin` (everyone else gets a 404).
+Grant or revoke access on the VPS:
+
+```bash
+bash /var/www/affylitics/deploy/make-admin.sh someone@example.com            # grant
+bash /var/www/affylitics/deploy/make-admin.sh someone@example.com --revoke   # revoke
+```
+
+Every staff action needs a written reason and is recorded in the audit log. Use **Escrow credit**
+for brands who pay by bank transfer, only after the money is visible in the company account.

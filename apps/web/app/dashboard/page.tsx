@@ -9,15 +9,20 @@ export default async function Overview() {
   const me = await requireMe();
   if (me.role === "advertiser") redirect("/dashboard/advertiser");
   const b = me.balances;
-  const [links, methods] = await Promise.all([
+  const [links, methods, sites] = await Promise.all([
     serverApi<unknown[]>("/api/links", { auth: true }),
     serverApi<unknown[]>("/api/payout-methods", { auth: true }),
+    serverApi<{ verified_at: string | null }[]>("/api/sites", { auth: true }),
   ]);
+  const promotesOnWebsite = Array.isArray(me.profile.channels) && me.profile.channels.includes("Website or blog");
   const checklist = [
     { done: true, label: "Set up your profile", href: "/onboarding" },
     { done: (links.data?.length ?? 0) > 0, label: "Get your first affiliate link", href: "/offers" },
     { done: (methods.data?.length ?? 0) > 0, label: "Add a payout method", href: "/dashboard/payouts" },
     { done: me.kyc_tier >= 1, label: "Verify your identity", href: "/dashboard/kyc" },
+    ...(promotesOnWebsite
+      ? [{ done: (sites.data ?? []).some((s) => s.verified_at), label: "Verify your website", href: "/dashboard/sites" }]
+      : []),
   ];
   const remaining = checklist.filter((c) => !c.done).length;
 

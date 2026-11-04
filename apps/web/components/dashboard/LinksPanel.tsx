@@ -6,7 +6,7 @@ import { api } from "@/lib/client";
 import { formatUsd } from "@/lib/site";
 
 type LinkRow = { code: string; sub_id: string | null; offer_slug: string; offer_title: string; clicks: number; conversions: number; earned_cents: number };
-type Conversion = { id: string; offer_title: string; commission_cents: number; status: string; matures_at: string; created_at: string };
+type Conversion = { id: string; offer_title: string; commission_cents: number; status: string; reject_reason: string | null; matures_at: string; created_at: string };
 
 export function LinksPanel() {
   const [links, setLinks] = useState<LinkRow[] | null>(null);
@@ -72,7 +72,7 @@ export function LinksPanel() {
                   <td>{new Date(c.created_at).toLocaleDateString()}</td>
                   <td>{c.offer_title}</td>
                   <td>
-                    {c.status === "pending" ? `Pending until ${new Date(c.matures_at).toLocaleDateString()}` : c.status === "approved" ? "Available" : "Rejected"}
+                    {c.status === "pending" ? `Pending until ${new Date(c.matures_at).toLocaleDateString()}` : c.status === "approved" ? "Available" : <>Rejected{c.reject_reason && <div className="muted" style={{ fontSize: ".85rem" }}>Reason: {c.reject_reason}</div>}</>}
                   </td>
                   <td className="num">{formatUsd(c.commission_cents)}</td>
                 </tr>

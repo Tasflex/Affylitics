@@ -23,6 +23,7 @@ pub struct ConversionRow {
     sale_cents: Option<i64>,
     commission_cents: i64,
     status: String,
+    reject_reason: Option<String>,
     matures_at: DateTime<Utc>,
     created_at: DateTime<Utc>,
 }
@@ -30,7 +31,7 @@ pub struct ConversionRow {
 pub async fn publisher_conversions(State(state): State<AppState>, user: CurrentUser) -> AppResult<Json<Vec<ConversionRow>>> {
     let rows = sqlx::query_as::<_, ConversionRow>(
         "SELECT v.id, o.title AS offer_title, v.external_ref, v.sale_cents, v.commission_cents,
-                v.status::text AS status, v.matures_at, v.created_at
+                v.status::text AS status, v.reject_reason, v.matures_at, v.created_at
          FROM conversions v JOIN offers o ON o.id = v.offer_id
          WHERE v.publisher_id = $1 ORDER BY v.created_at DESC LIMIT 500",
     )
@@ -44,7 +45,7 @@ pub async fn advertiser_conversions(State(state): State<AppState>, user: Current
     user.require_role("advertiser")?;
     let rows = sqlx::query_as::<_, ConversionRow>(
         "SELECT v.id, o.title AS offer_title, v.external_ref, v.sale_cents, v.commission_cents,
-                v.status::text AS status, v.matures_at, v.created_at
+                v.status::text AS status, v.reject_reason, v.matures_at, v.created_at
          FROM conversions v JOIN offers o ON o.id = v.offer_id JOIN brands b ON b.id = o.brand_id
          WHERE b.owner_id = $1 ORDER BY v.created_at DESC LIMIT 500",
     )
@@ -91,30 +92,40 @@ pub async fn reject_conversion(
     Json(body): Json<RejectBody>,
 ) -> AppResult<Json<Value>> {
     user.require_role("advertiser")?;
-    let reason = body.reason.trim();
-    if reason.len() < 3 {
-        return Err(AppError::BadRequest("give a short reason so the publisher understands".into()));
+    reject(&state, id, Some(user.id), &body.reason).await?;
+    auth::audit(&state, Some(user.id), "conversion.reject", Some(id.to_string()), json!({ "reason": body.reason.trim() }), &headers).await;
+    Ok(Json(json!({ "ok": true })))
+}
+
+/// Rejects a pending conversion, storing the reason the publisher will see, and returns the
+/// commission and fee to the advertiser's escrow. `owner` limits it to that advertiser's offers;
+/// None is staff acting on any offer.
+pub async fn reject(state: &AppState, id: Uuid, owner: Option<Uuid>, reason: &str) -> AppResult<()> {
+    let reason = reason.trim();
+    if reason.len() < 3 || reason.len() > 500 {
+        return Err(AppError::BadRequest("give a short reason (3 to 500 characters) so the publisher understands".into()));
     }
     let mut tx = state.db.begin().await?;
     let row: Option<(Uuid, Uuid, i64, i64)> = sqlx::query_as(
-        "UPDATE conversions v SET status = 'rejected'
+        "UPDATE conversions v SET status = 'rejected', reject_reason = $3
          FROM offers o, brands b
-         WHERE v.id = $1 AND v.status = 'pending' AND o.id = v.offer_id AND b.id = o.brand_id AND b.owner_id = $2
+         WHERE v.id = $1 AND v.status = 'pending' AND o.id = v.offer_id AND b.id = o.brand_id
+           AND ($2::uuid IS NULL OR b.owner_id = $2)
          RETURNING v.publisher_id, b.owner_id, v.commission_cents, v.fee_cents",
     )
     .bind(id)
-    .bind(user.id)
+    .bind(owner)
+    .bind(reason)
     .fetch_optional(&mut *tx)
     .await?;
     let (publisher, advertiser, commission, fee) =
-        row.ok_or_else(|| AppError::Conflict("only pending conversions you own can be rejected".into()))?;
+        row.ok_or_else(|| AppError::Conflict("only pending conversions can be rejected".into()))?;
     let pending = ledger::account(&mut tx, Some(publisher), ledger::PENDING).await?;
     let escrow = ledger::account(&mut tx, Some(advertiser), ledger::ESCROW).await?;
     let revenue = ledger::account(&mut tx, None, ledger::REVENUE).await?;
     ledger::post(&mut tx, "conversion_rejected", Some(id), None, &[(pending, -commission), (revenue, -fee), (escrow, commission + fee)]).await?;
     tx.commit().await?;
-    auth::audit(&state, Some(user.id), "conversion.reject", Some(id.to_string()), json!({ "reason": reason }), &headers).await;
-    Ok(Json(json!({ "ok": true })))
+    Ok(())
 }
 
 /// Moves conversions whose hold period has ended from pending to available.

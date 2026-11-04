@@ -25,6 +25,7 @@ pub struct CurrentUser {
     pub country: String,
     pub kyc_tier: i16,
     pub email_verified: bool,
+    pub is_admin: bool,
 }
 
 impl CurrentUser {
@@ -34,6 +35,15 @@ impl CurrentUser {
             Err(AppError::Forbidden("finish setting up your account first".into()))
         } else {
             Ok(())
+        }
+    }
+
+    pub fn require_admin(&self) -> AppResult<()> {
+        if self.is_admin {
+            Ok(())
+        } else {
+            // Look like a missing route rather than advertising that an admin area exists.
+            Err(AppError::NotFound)
         }
     }
 
@@ -54,18 +64,18 @@ impl FromRequestParts<AppState> for CurrentUser {
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
         let jar = CookieJar::from_headers(&parts.headers);
         let token = jar.get(SESSION_COOKIE).ok_or(AppError::Unauthorized)?.value().to_string();
-        let row: Option<(Uuid, String, String, String, String, i16, bool)> = sqlx::query_as(
+        let row: Option<(Uuid, String, String, String, String, i16, bool, bool)> = sqlx::query_as(
             // role and country are empty until a Google user finishes onboarding.
-            "SELECT u.id, u.email::text, COALESCE(u.role::text, ''), u.display_name, COALESCE(u.country, ''), u.kyc_tier, u.email_verified
+            "SELECT u.id, u.email::text, COALESCE(u.role::text, ''), u.display_name, COALESCE(u.country, ''), u.kyc_tier, u.email_verified, u.is_admin
              FROM sessions s JOIN users u ON u.id = s.user_id
              WHERE s.token_hash = $1 AND s.expires_at > now() AND u.status = 'active'",
         )
         .bind(crypto::sha256(token.as_bytes()))
         .fetch_optional(&state.db)
         .await?;
-        let (id, email, role, display_name, country, kyc_tier, email_verified) =
+        let (id, email, role, display_name, country, kyc_tier, email_verified, is_admin) =
             row.ok_or(AppError::Unauthorized)?;
-        Ok(CurrentUser { id, email, role, display_name, country: country.trim().to_string(), kyc_tier, email_verified })
+        Ok(CurrentUser { id, email, role, display_name, country: country.trim().to_string(), kyc_tier, email_verified, is_admin })
     }
 }
 

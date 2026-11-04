@@ -1,10 +1,12 @@
 pub mod account;
+pub mod admin;
 pub mod earnings;
 pub mod internal;
 pub mod kyc;
 pub mod oauth;
 pub mod offers;
 pub mod payouts;
+pub mod sites;
 pub mod track;
 
 use std::time::Duration;
@@ -59,7 +61,11 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/api/payout-methods/:id", delete(payouts::remove_method))
         .route("/api/payouts", get(payouts::list_payouts).post(payouts::request_payout))
         .route("/api/kyc", get(kyc::status).post(kyc::start))
+        .route("/api/sites", get(sites::list).post(sites::add))
+        .route("/api/sites/:id", delete(sites::remove))
+        .route("/api/sites/:id/verify", post(sites::verify))
         // Service-to-service
+        .nest("/api/admin", admin::router())
         .nest("/internal", internal::router())
 }
 

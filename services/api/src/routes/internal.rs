@@ -135,25 +135,45 @@ async fn payout_result(_: Internal, State(state): State<AppState>, Path(id): Pat
     if r.status != "paid" && r.status != "failed" {
         return Err(AppError::BadRequest("status must be submitted, paid or failed".into()));
     }
+    settle_payout(&state, id, &r.status, r.provider_ref.as_deref(), r.failure_reason.as_deref(),
+        (r.local_currency.as_deref(), r.local_amount, r.fx_rate), &["processing"]).await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+/// Finalises a payout as `paid` or `failed`, moving the money out of clearing (to the outside
+/// world, or back to the user's available balance), and emails the user. `from` lists the states
+/// it may be finalised from: providers settle `processing` payouts; staff may also settle
+/// `requested` ones held for manual review.
+pub async fn settle_payout(
+    state: &AppState,
+    id: Uuid,
+    status: &str,
+    provider_ref: Option<&str>,
+    failure_reason: Option<&str>,
+    (local_currency, local_amount, fx_rate): (Option<&str>, Option<f64>, Option<f64>),
+    from: &[&str],
+) -> AppResult<()> {
     let mut tx = state.db.begin().await?;
+    let from: Vec<String> = from.iter().map(|s| s.to_string()).collect();
     let row: Option<(Uuid, i64)> = sqlx::query_as(
         "UPDATE payouts SET status = $2::payout_status, provider_ref = COALESCE($3, provider_ref), failure_reason = $4,
                 local_currency = COALESCE($5, local_currency), local_amount = COALESCE($6::numeric, local_amount),
                 fx_rate = COALESCE($7::numeric, fx_rate), updated_at = now()
-         WHERE id = $1 AND status = 'processing' RETURNING user_id, amount_cents",
+         WHERE id = $1 AND status::text = ANY($8) RETURNING user_id, amount_cents",
     )
     .bind(id)
-    .bind(&r.status)
-    .bind(&r.provider_ref)
-    .bind(&r.failure_reason)
-    .bind(&r.local_currency)
-    .bind(r.local_amount)
-    .bind(r.fx_rate)
+    .bind(status)
+    .bind(provider_ref)
+    .bind(failure_reason)
+    .bind(local_currency)
+    .bind(local_amount)
+    .bind(fx_rate)
+    .bind(&from)
     .fetch_optional(&mut *tx)
     .await?;
-    let (user_id, amount) = row.ok_or_else(|| AppError::Conflict("payout is not processing".into()))?;
+    let (user_id, amount) = row.ok_or_else(|| AppError::Conflict(format!("payout is not {}", from.join(" or "))))?;
     let clearing = ledger::account(&mut tx, Some(user_id), ledger::CLEARING).await?;
-    let (kind, dest) = if r.status == "paid" {
+    let (kind, dest) = if status == "paid" {
         ("payout_sent", ledger::account(&mut tx, None, ledger::EXTERNAL).await?)
     } else {
         ("payout_failed", ledger::account(&mut tx, Some(user_id), ledger::AVAILABLE).await?)
@@ -161,9 +181,9 @@ async fn payout_result(_: Internal, State(state): State<AppState>, Path(id): Pat
     ledger::post(&mut tx, kind, Some(id), None, &[(clearing, -amount), (dest, amount)]).await?;
     tx.commit().await?;
 
-    if let Some((to, name)) = track::contact(&state, user_id).await {
+    if let Some((to, name)) = track::contact(state, user_id).await {
         let origin = &state.cfg.public_origin;
-        let mail = if r.status == "paid" {
+        let mail = if status == "paid" {
             let rail: String = sqlx::query_scalar("SELECT m.rail FROM payouts p JOIN payout_methods m ON m.id = p.method_id WHERE p.id = $1")
                 .bind(id)
                 .fetch_one(&state.db)
@@ -172,12 +192,11 @@ async fn payout_result(_: Internal, State(state): State<AppState>, Path(id): Pat
             let method = state.rails.rail(&rail).map(|r| r.name.clone()).unwrap_or_else(|| "payout method".into());
             email::payout_sent(&to, &name, &track::usd(amount), &method, origin)
         } else {
-            let reason = r.failure_reason.as_deref().unwrap_or("the payment provider declined it");
-            email::payout_failed(&to, &name, &track::usd(amount), reason, origin)
+            email::payout_failed(&to, &name, &track::usd(amount), failure_reason.unwrap_or("the payment provider declined it"), origin)
         };
-        email::send_later(&state, mail);
+        email::send_later(state, mail);
     }
-    Ok(Json(json!({ "ok": true })))
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -228,30 +247,37 @@ struct CreditBody {
 
 /// Credits an advertiser's escrow after the intel service confirms a payment was collected.
 async fn escrow_credit(_: Internal, State(state): State<AppState>, Json(b): Json<CreditBody>) -> AppResult<Json<Value>> {
-    if b.amount_cents <= 0 || b.reference.is_empty() {
+    let status = credit_escrow(&state, b.user_id, b.amount_cents, &b.reference).await?;
+    Ok(Json(json!({ "status": status })))
+}
+
+/// Adds money to an advertiser's escrow. Idempotent per reference: returns "duplicate" when the
+/// same payment reference was already credited.
+pub async fn credit_escrow(state: &AppState, user_id: Uuid, amount_cents: i64, reference: &str) -> AppResult<&'static str> {
+    if amount_cents <= 0 || reference.trim().is_empty() {
         return Err(AppError::BadRequest("amount and reference required".into()));
     }
-    let key = format!("escrow:{}", b.reference);
+    let key = format!("escrow:{}", reference.trim());
     let mut tx = state.db.begin().await?;
     let seen: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ledger_txns WHERE idempotency_key = $1)")
         .bind(&key)
         .fetch_one(&mut *tx)
         .await?;
     if seen {
-        return Ok(Json(json!({ "status": "duplicate" })));
+        return Ok("duplicate");
     }
     let is_advertiser: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND role = 'advertiser')")
-        .bind(b.user_id)
+        .bind(user_id)
         .fetch_one(&mut *tx)
         .await?;
     if !is_advertiser {
         return Err(AppError::NotFound);
     }
     let external = ledger::account(&mut tx, None, ledger::EXTERNAL).await?;
-    let escrow = ledger::account(&mut tx, Some(b.user_id), ledger::ESCROW).await?;
-    ledger::post(&mut tx, "escrow_funded", Some(b.user_id), Some(&key), &[(external, -b.amount_cents), (escrow, b.amount_cents)]).await?;
+    let escrow = ledger::account(&mut tx, Some(user_id), ledger::ESCROW).await?;
+    ledger::post(&mut tx, "escrow_funded", Some(user_id), Some(&key), &[(external, -amount_cents), (escrow, amount_cents)]).await?;
     tx.commit().await?;
-    Ok(Json(json!({ "status": "credited" })))
+    Ok("credited")
 }
 
 #[derive(Deserialize)]

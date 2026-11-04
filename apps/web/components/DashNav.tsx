@@ -7,17 +7,19 @@ import { api } from "@/lib/client";
 const PUBLISHER = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/payouts", label: "Payouts" },
+  { href: "/dashboard/sites", label: "Websites" },
   { href: "/dashboard/kyc", label: "Verification" },
   { href: "/dashboard/ledger", label: "Ledger" },
 ];
 
 const ADVERTISER = [
   { href: "/dashboard/advertiser", label: "Offers & escrow" },
+  { href: "/dashboard/sites", label: "Websites" },
   { href: "/dashboard/kyc", label: "Verification" },
   { href: "/dashboard/ledger", label: "Ledger" },
 ];
 
-export function DashNav({ role, name }: { role: string; name: string }) {
+export function DashNav({ role, name, isAdmin = false }: { role: string; name: string; isAdmin?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const links = role === "advertiser" ? ADVERTISER : PUBLISHER;
@@ -30,6 +32,9 @@ export function DashNav({ role, name }: { role: string; name: string }) {
             <Link href={l.href} aria-current={pathname === l.href ? "page" : undefined}>{l.label}</Link>
           </li>
         ))}
+        {isAdmin && (
+          <li><Link href="/admin" aria-current={pathname.startsWith("/admin") ? "page" : undefined}>Admin console</Link></li>
+        )}
         <li>
           <button
             type="button"

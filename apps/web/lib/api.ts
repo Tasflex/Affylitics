@@ -32,6 +32,7 @@ export type Me = {
   kyc_tier: number;
   email_verified: boolean;
   onboarded: boolean;
+  is_admin: boolean;
   has_password: boolean;
   profile: Record<string, string | string[] | boolean>;
   balances: { escrow_cents: number; pending_cents: number; available_cents: number; in_payout_cents: number };
