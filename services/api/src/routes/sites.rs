@@ -189,7 +189,7 @@ async fn fetch_public(start: url::Url) -> Result<String, String> {
         if port != 80 && port != 443 {
             return Err("only standard web ports (80 and 443) can be checked".into());
         }
-        let addrs: Vec<SocketAddr> = tokio::time::timeout(Duration::from_secs(5), tokio::net::lookup_host((host.as_str(), port)))
+        let mut addrs: Vec<SocketAddr> = tokio::time::timeout(Duration::from_secs(5), tokio::net::lookup_host((host.as_str(), port)))
             .await
             .map_err(|_| "looking up your domain timed out".to_string())?
             .map_err(|_| "we couldn't find that domain; check the address".to_string())?
@@ -197,19 +197,32 @@ async fn fetch_public(start: url::Url) -> Result<String, String> {
         if addrs.is_empty() || !addrs.iter().all(|a| is_public(a.ip())) {
             return Err("that address doesn't point to a public website".into());
         }
-        let client = reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .timeout(Duration::from_secs(10))
-            .resolve(&host, addrs[0])
-            .user_agent("NetAffilBot/1.0 (+https://netaffil.com) site verification")
-            .build()
-            .map_err(|_| "internal error".to_string())?;
-        let mut res = client
-            .get(current.clone())
-            .header("accept", "text/html")
-            .send()
-            .await
-            .map_err(|e| if e.is_timeout() { "your site took too long to respond".to_string() } else { "we couldn't connect to your site".to_string() })?;
+        // Prefer IPv4 (the server may have no IPv6 route), then try each vetted address in turn.
+        addrs.sort_by_key(|a| a.is_ipv6());
+        let mut last_err = "we couldn't connect to your site".to_string();
+        let mut response = None;
+        for addr in addrs.iter().take(4) {
+            let client = reqwest::Client::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .timeout(Duration::from_secs(10))
+                .connect_timeout(Duration::from_secs(4))
+                .resolve(&host, *addr)
+                .user_agent("NetAffilBot/1.0 (+https://netaffil.com) site verification")
+                .build()
+                .map_err(|_| "internal error".to_string())?;
+            match client.get(current.clone()).header("accept", "text/html").send().await {
+                Ok(r) => {
+                    response = Some(r);
+                    break;
+                }
+                Err(e) if e.is_connect() => continue,
+                Err(e) => {
+                    last_err = if e.is_timeout() { "your site took too long to respond".into() } else { "we couldn't connect to your site".into() };
+                    break;
+                }
+            }
+        }
+        let mut res = response.ok_or(last_err)?;
 
         if res.status().is_redirection() {
             let location = res.headers().get("location").and_then(|v| v.to_str().ok()).ok_or("your site sent a broken redirect")?;
