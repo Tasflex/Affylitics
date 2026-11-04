@@ -79,6 +79,7 @@ pub async fn add_method(
     user: CurrentUser,
     Json(body): Json<MethodBody>,
 ) -> AppResult<Json<Value>> {
+    user.require_country()?;
     limit(&state, &headers, "method", 10, 3600)?;
     let country_rails = state
         .rails

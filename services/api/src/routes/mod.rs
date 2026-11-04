@@ -2,6 +2,7 @@ pub mod account;
 pub mod earnings;
 pub mod internal;
 pub mod kyc;
+pub mod oauth;
 pub mod offers;
 pub mod payouts;
 pub mod track;
@@ -29,6 +30,9 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/api/auth/login", post(account::login))
         .route("/api/auth/logout", post(account::logout))
         .route("/api/me", get(account::me))
+        .route("/api/onboarding", post(account::onboarding))
+        .route("/api/auth/google/start", get(oauth::start))
+        .route("/api/auth/google/callback", get(oauth::callback))
         // Marketplace
         .route("/api/offers", get(offers::list_public).post(offers::create))
         .route("/api/offers/:slug", get(offers::get_public))

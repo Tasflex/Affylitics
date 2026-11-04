@@ -28,7 +28,17 @@ pub struct CurrentUser {
 }
 
 impl CurrentUser {
+    /// Payouts and verification depend on the country, which new Google users set during onboarding.
+    pub fn require_country(&self) -> AppResult<()> {
+        if self.country.is_empty() {
+            Err(AppError::Forbidden("finish setting up your account first".into()))
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn require_role(&self, role: &str) -> AppResult<()> {
+        self.require_country()?;
         if self.role == role || self.role == "admin" {
             Ok(())
         } else {
@@ -45,7 +55,8 @@ impl FromRequestParts<AppState> for CurrentUser {
         let jar = CookieJar::from_headers(&parts.headers);
         let token = jar.get(SESSION_COOKIE).ok_or(AppError::Unauthorized)?.value().to_string();
         let row: Option<(Uuid, String, String, String, String, i16, bool)> = sqlx::query_as(
-            "SELECT u.id, u.email::text, u.role::text, u.display_name, u.country, u.kyc_tier, u.email_verified
+            // role and country are empty until a Google user finishes onboarding.
+            "SELECT u.id, u.email::text, COALESCE(u.role::text, ''), u.display_name, COALESCE(u.country, ''), u.kyc_tier, u.email_verified
              FROM sessions s JOIN users u ON u.id = s.user_id
              WHERE s.token_hash = $1 AND s.expires_at > now() AND u.status = 'active'",
         )

@@ -73,3 +73,17 @@ exists), deploy. The per-country SEO page is generated automatically.
 `bash deploy/e2e-test.sh` runs the full money flow (signup, click, signed postback, escrow,
 ledger invariants, KYC gate, payout) against a throwaway `affylitics_e2e` database on the same
 Aiven server and drops it afterwards. Needs `postgresql-client`.
+
+## Sign in with Google
+
+1. Google Cloud Console → APIs & Services → OAuth consent screen: app name NetAffil, support
+   email, authorized domain `netaffil.com`, scopes `openid`, `email`, `profile`. Publish it.
+2. Credentials → Create credentials → OAuth client ID → Web application.
+   - Authorized JavaScript origin: `https://netaffil.com`
+   - Authorized redirect URI: `https://netaffil.com/api/auth/google/callback`
+3. Put the client ID and secret in `.env` as `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, then
+   `pm2 restart affylitics-api affylitics-web --update-env` (no rebuild needed). The "Continue with
+   Google" button appears once both are set.
+
+Accounts are matched by Google account ID, then by verified email, so an existing email/password
+user who signs in with Google with the same address keeps the same account.

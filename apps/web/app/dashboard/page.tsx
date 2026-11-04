@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LinksPanel } from "@/components/dashboard/LinksPanel";
+import { serverApi } from "@/lib/api";
 import { requireMe } from "@/lib/session";
 import { formatUsd } from "@/lib/site";
 
@@ -8,15 +9,40 @@ export default async function Overview() {
   const me = await requireMe();
   if (me.role === "advertiser") redirect("/dashboard/advertiser");
   const b = me.balances;
+  const [links, methods] = await Promise.all([
+    serverApi<unknown[]>("/api/links", { auth: true }),
+    serverApi<unknown[]>("/api/payout-methods", { auth: true }),
+  ]);
+  const checklist = [
+    { done: true, label: "Set up your profile", href: "/onboarding" },
+    { done: (links.data?.length ?? 0) > 0, label: "Get your first affiliate link", href: "/offers" },
+    { done: (methods.data?.length ?? 0) > 0, label: "Add a payout method", href: "/dashboard/payouts" },
+    { done: me.kyc_tier >= 1, label: "Verify your identity", href: "/dashboard/kyc" },
+  ];
+  const remaining = checklist.filter((c) => !c.done).length;
+
   return (
     <>
-      <h1 style={{ fontSize: "2.2rem" }}>Overview</h1>
-      {me.kyc_tier === 0 && (
-        <div className="alert info" role="note">
-          You can earn right away. Before your first withdrawal, <Link href="/dashboard/kyc">verify your identity</Link>.
-        </div>
+      <h1 style={{ fontSize: "2.2rem" }}>Welcome, {me.display_name.split(" ")[0]}</h1>
+
+      {remaining > 0 && (
+        <section className="card" aria-labelledby="gs" style={{ marginBottom: 24 }}>
+          <div className="spread">
+            <h2 id="gs" style={{ fontSize: "1.3rem", fontFamily: "var(--font-sans)", fontWeight: 750, margin: 0 }}>Getting started</h2>
+            <span className="pill">{checklist.length - remaining} of {checklist.length} done</span>
+          </div>
+          <ul className="check-steps">
+            {checklist.map((c) => (
+              <li key={c.label} data-done={c.done}>
+                <span className="tick" aria-hidden="true">{c.done ? "✓" : ""}</span>
+                {c.done ? <span>{c.label}<span className="sr-only"> (done)</span></span> : <Link href={c.href}>{c.label}</Link>}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
-      <div className="grid cols-3" style={{ margin: "20px 0 36px" }}>
+
+      <div className="grid cols-3" style={{ margin: "0 0 36px" }}>
         <div className="card stat">
           <div className="label">Available to withdraw</div>
           <div className="value">{formatUsd(b.available_cents)}</div>

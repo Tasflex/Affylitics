@@ -24,11 +24,16 @@ export async function serverApi<T>(path: string, init?: { revalidate?: number; a
 export type Me = {
   id: string;
   email: string;
-  role: "publisher" | "advertiser" | "admin";
+  /** Empty until a new Google user picks a side during onboarding. */
+  role: "publisher" | "advertiser" | "admin" | "";
   display_name: string;
+  /** Empty until set during onboarding. */
   country: string;
   kyc_tier: number;
   email_verified: boolean;
+  onboarded: boolean;
+  has_password: boolean;
+  profile: Record<string, string | string[] | boolean>;
   balances: { escrow_cents: number; pending_cents: number; available_cents: number; in_payout_cents: number };
 };
 

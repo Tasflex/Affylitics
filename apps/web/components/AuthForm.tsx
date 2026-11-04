@@ -4,22 +4,36 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useRef, useState } from "react";
 import { api } from "@/lib/client";
+import { GoogleButton, OrDivider } from "./GoogleButton";
 
 type Country = { code: string; name: string };
+
+/** Messages for ?error= codes set by the Google sign-in callback. */
+const OAUTH_ERRORS: Record<string, string> = {
+  google_cancelled: "Google sign-in was cancelled.",
+  google_expired: "That sign-in took too long. Please try again.",
+  google_failed: "We couldn't complete Google sign-in. Please try again.",
+  google_no_email: "Your Google account didn't share an email address.",
+  google_unverified: "Your Google email address isn't verified yet.",
+  google_unavailable: "Google sign-in isn't available right now. Use your email instead.",
+  account_inactive: "This account is not active. Please contact support.",
+  too_many: "Too many attempts. Please wait a few minutes.",
+};
 
 /** Only allow same-site relative redirects after sign-in. */
 function safeNext(next: string | null): string {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 }
 
-export function AuthForm({ mode, countries = [] }: { mode: "signup" | "login"; countries?: Country[] }) {
+export function AuthForm({ mode, countries = [], googleEnabled = false }: { mode: "signup" | "login"; countries?: Country[]; googleEnabled?: boolean }) {
   const router = useRouter();
   const params = useSearchParams();
   const id = useId();
   const errorRef = useRef<HTMLDivElement>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => OAUTH_ERRORS[params.get("error") ?? ""] ?? null);
   const [busy, setBusy] = useState(false);
-  const initialRole = params.get("role") === "advertiser" ? "advertiser" : "publisher";
+  const [role, setRole] = useState(params.get("role") === "advertiser" ? "advertiser" : "publisher");
+  const initialRole = role;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,7 +49,7 @@ export function AuthForm({ mode, countries = [] }: { mode: "signup" | "login"; c
           country: form.get("country"),
           role: form.get("role"),
         });
-        router.push(form.get("role") === "advertiser" ? "/dashboard/advertiser" : "/dashboard");
+        router.push("/onboarding");
       } else {
         await api("/api/auth/login", { email: form.get("email"), password: form.get("password") });
         router.push(safeNext(params.get("next")));
@@ -55,18 +69,28 @@ export function AuthForm({ mode, countries = [] }: { mode: "signup" | "login"; c
       </div>
 
       {mode === "signup" && (
+        <fieldset className="radio-cards">
+          <legend>I want to</legend>
+          <label className="radio-card">
+            <input type="radio" name="role" value="publisher" defaultChecked={initialRole === "publisher"} onChange={() => setRole("publisher")} />
+            <span><strong>Earn commissions</strong><br /><span className="muted">Affiliate, creator or publisher</span></span>
+          </label>
+          <label className="radio-card">
+            <input type="radio" name="role" value="advertiser" defaultChecked={initialRole === "advertiser"} onChange={() => setRole("advertiser")} />
+            <span><strong>Grow my brand</strong><br /><span className="muted">Brand or product owner</span></span>
+          </label>
+        </fieldset>
+      )}
+
+      {googleEnabled && (
         <>
-          <fieldset className="radio-cards">
-            <legend>I want to</legend>
-            <label className="radio-card">
-              <input type="radio" name="role" value="publisher" defaultChecked={initialRole === "publisher"} />
-              <span><strong>Earn commissions</strong><br /><span className="muted">Publisher, creator or blogger</span></span>
-            </label>
-            <label className="radio-card">
-              <input type="radio" name="role" value="advertiser" defaultChecked={initialRole === "advertiser"} />
-              <span><strong>Get affiliates</strong><br /><span className="muted">Brand or product owner</span></span>
-            </label>
-          </fieldset>
+          <GoogleButton role={mode === "signup" ? role : undefined} next={mode === "login" ? safeNext(params.get("next")) : undefined} />
+          <OrDivider />
+        </>
+      )}
+
+      {mode === "signup" && (
+        <>
           <div className="field">
             <label htmlFor={`${id}-name`}>Your name or brand</label>
             <input id={`${id}-name`} name="display_name" className="input" required maxLength={80} autoComplete="name" />

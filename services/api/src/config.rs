@@ -15,6 +15,17 @@ pub struct Config {
     pub internal_token: String,
     pub intel_url: String,
     pub rails_path: String,
+    /// Google OAuth client. Sign-in with Google is off unless both are set.
+    pub google: Option<GoogleOAuth>,
+}
+
+pub struct GoogleOAuth {
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+fn optional(name: &str) -> Option<String> {
+    std::env::var(name).ok().map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
 }
 
 fn var(name: &str) -> Result<String> {
@@ -47,6 +58,9 @@ impl Config {
             intel_url: std::env::var("INTEL_URL").unwrap_or_else(|_| "http://127.0.0.1:8200".into()),
             rails_path: std::env::var("RAILS_PATH")
                 .unwrap_or_else(|_| "../../packages/shared/rails.json".into()),
+            google: optional("GOOGLE_CLIENT_ID")
+                .zip(optional("GOOGLE_CLIENT_SECRET"))
+                .map(|(client_id, client_secret)| GoogleOAuth { client_id, client_secret }),
         })
     }
 }

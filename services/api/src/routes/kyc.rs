@@ -55,6 +55,7 @@ pub async fn start(
     user: CurrentUser,
     Json(body): Json<StartBody>,
 ) -> AppResult<Json<Value>> {
+    user.require_country()?;
     limit(&state, &headers, "kyc", 5, 3600)?;
     if !(1..=3).contains(&body.tier) || body.tier <= user.kyc_tier {
         return Err(AppError::BadRequest("choose a higher verification level than you have".into()));
