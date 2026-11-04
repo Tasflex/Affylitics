@@ -39,13 +39,13 @@ add new files as `0002_name.sql` and never edit an applied one.
 
 | Provider | URL |
 |---|---|
-| Flutterwave | `https://network.affylitics.com/hooks/flutterwave` (set the secret hash = `FLW_WEBHOOK_HASH`) |
-| Paystack | `https://network.affylitics.com/hooks/paystack` |
-| PayPal | `https://network.affylitics.com/hooks/paypal` (copy the webhook ID to `PAYPAL_WEBHOOK_ID`) |
-| Stripe | `https://network.affylitics.com/hooks/stripe` (event `checkout.session.completed`) |
+| Flutterwave | `https://netaffil.com/hooks/flutterwave` (set the secret hash = `FLW_WEBHOOK_HASH`) |
+| Paystack | `https://netaffil.com/hooks/paystack` |
+| PayPal | `https://netaffil.com/hooks/paypal` (copy the webhook ID to `PAYPAL_WEBHOOK_ID`) |
+| Stripe | `https://netaffil.com/hooks/stripe` (event `checkout.session.completed`) |
 | M-Pesa | set automatically per request: `/hooks/payouts/mpesa/<MPESA_CALLBACK_TOKEN>` |
 | Smile ID | set per link: `/hooks/kyc/smileid` |
-| Sumsub | `https://network.affylitics.com/hooks/kyc/sumsub` |
+| Sumsub | `https://netaffil.com/hooks/kyc/sumsub` |
 
 ## Payout states and what to do
 

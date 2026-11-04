@@ -12,7 +12,7 @@ const SIGNATURE_EXAMPLE = `ts=$(date +%s)
 body='{"click_id":"<aff_click from your landing URL>","external_ref":"order-1042","sale_cents":4999}'
 sig=$(printf '%s.%s' "$ts" "$body" | openssl dgst -sha256 -hmac "$POSTBACK_SECRET" -hex | cut -d' ' -f2)
 
-curl https://network.affylitics.com/api/postback \\
+curl https://netaffil.com/api/postback \\
   -H "Content-Type: application/json" \\
   -H "X-Affylitics-Brand: $BRAND_ID" \\
   -H "X-Affylitics-Timestamp: $ts" \\

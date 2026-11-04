@@ -4,7 +4,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 pub struct Config {
     pub database_url: String,
     pub bind: String,
-    /// The site origin browsers use, e.g. https://network.affylitics.com. Used for CSRF checks.
+    /// The site origin browsers use, e.g. https://netaffil.com. Used for CSRF checks.
     pub public_origin: String,
     pub cookie_secure: bool,
     /// Salt for hashing IPs and user agents so raw values are never stored.
