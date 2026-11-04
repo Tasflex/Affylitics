@@ -31,6 +31,10 @@ pub fn router(_state: AppState) -> Router<AppState> {
         .route("/api/auth/logout", post(account::logout))
         .route("/api/me", get(account::me))
         .route("/api/onboarding", post(account::onboarding))
+        .route("/api/auth/verify-email", post(account::verify_email))
+        .route("/api/auth/resend-verification", post(account::resend_verification))
+        .route("/api/auth/forgot", post(account::forgot_password))
+        .route("/api/auth/reset", post(account::reset_password))
         .route("/api/auth/google/start", get(oauth::start))
         .route("/api/auth/google/callback", get(oauth::callback))
         // Marketplace

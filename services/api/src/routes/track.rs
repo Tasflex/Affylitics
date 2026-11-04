@@ -13,7 +13,7 @@ use uuid::Uuid;
 use super::limit;
 use crate::{
     auth::{client_ip, CurrentUser},
-    crypto,
+    crypto, email,
     error::{AppError, AppResult},
     ledger, AppState,
 };
@@ -278,18 +278,53 @@ pub async fn postback(State(state): State<AppState>, headers: HeaderMap, body: B
     .await?;
 
     match tx.commit().await {
-        Ok(()) => Ok(Json(json!({ "status": "recorded", "conversion_id": conv_id, "commission_cents": commission }))),
+        Ok(()) => {
+            notify_commission(&state, co.publisher_id, co.offer_id, commission, co.hold_days).await;
+            Ok(Json(json!({ "status": "recorded", "conversion_id": conv_id, "commission_cents": commission })))
+        }
         Err(e) => {
             let err = AppError::from(e);
             if matches!(err, AppError::Conflict(_)) {
                 // Escrow ran dry: pause the advertiser's offers so no publisher sends unpaid traffic.
-                sqlx::query("UPDATE offers o SET status = 'paused' FROM brands b WHERE o.brand_id = b.id AND b.owner_id = $1 AND o.status = 'active'")
+                let paused = sqlx::query("UPDATE offers o SET status = 'paused' FROM brands b WHERE o.brand_id = b.id AND b.owner_id = $1 AND o.status = 'active'")
                     .bind(advertiser_id)
                     .execute(&state.db)
                     .await?;
+                // Email only when something was actually paused, not on every rejected postback.
+                if paused.rows_affected() > 0 {
+                    if let Some((to, name)) = contact(&state, advertiser_id).await {
+                        email::send_later(&state, email::campaigns_paused(&to, &name, &state.cfg.public_origin));
+                    }
+                }
                 return Err(AppError::Conflict("escrow balance too low; offers paused until funded".into()));
             }
             Err(err)
         }
     }
+}
+
+pub fn usd(cents: i64) -> String {
+    format!("${}.{:02}", cents / 100, cents % 100)
+}
+
+/// A user's email and display name, for notifications. Errors are logged, never surfaced.
+pub async fn contact(state: &AppState, user_id: Uuid) -> Option<(String, String)> {
+    sqlx::query_as("SELECT email::text, display_name FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| tracing::error!(error = ?e, "contact lookup failed"))
+        .ok()
+        .flatten()
+}
+
+async fn notify_commission(state: &AppState, publisher_id: Uuid, offer_id: Uuid, commission: i64, hold_days: i32) {
+    let Some((to, name)) = contact(state, publisher_id).await else { return };
+    let offer: String = sqlx::query_scalar("SELECT title FROM offers WHERE id = $1")
+        .bind(offer_id)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or_else(|_| "an offer".into());
+    let available_on = (Utc::now() + Duration::days(hold_days as i64)).format("%-d %B %Y").to_string();
+    email::send_later(state, email::commission_earned(&to, &name, &usd(commission), &offer, &available_on, &state.cfg.public_origin));
 }

@@ -1,6 +1,7 @@
 mod auth;
 mod config;
 mod crypto;
+mod email;
 mod error;
 mod ledger;
 mod rails;

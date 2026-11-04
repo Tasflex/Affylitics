@@ -7,7 +7,7 @@ BASE_DB="$DATABASE_URL"
 TEST_DB="${DATABASE_URL/\/defaultdb?/\/affylitics_e2e?}"
 psql "$BASE_DB" -qc "DROP DATABASE IF EXISTS affylitics_e2e" -c "CREATE DATABASE affylitics_e2e" || exit 1
 
-DATABASE_URL="$TEST_DB" API_BIND=127.0.0.1:8199 DB_MAX_CONNECTIONS=3 GOOGLE_CLIENT_ID=e2e-client GOOGLE_CLIENT_SECRET=e2e-secret services/api/target/release/affylitics-api > /tmp/e2e-api.log 2>&1 &
+RESEND_API_KEY= DATABASE_URL="$TEST_DB" API_BIND=127.0.0.1:8199 DB_MAX_CONNECTIONS=3 GOOGLE_CLIENT_ID=e2e-client GOOGLE_CLIENT_SECRET=e2e-secret services/api/target/release/affylitics-api > /tmp/e2e-api.log 2>&1 &
 APIPID=$!
 for i in $(seq 1 40); do curl -sf http://127.0.0.1:8199/api/health >/dev/null && break; sleep 1; done
 
@@ -77,7 +77,7 @@ check "payout blocked while earnings are still pending" "$(code -H "$O" -H "$J" 
 # Hold period ends -> available -> payout -> worker reports paid
 psql "$TEST_DB" -qc "UPDATE conversions SET matures_at = now() - interval '1 minute'"
 kill $APIPID; wait $APIPID 2>/dev/null
-DATABASE_URL="$TEST_DB" API_BIND=127.0.0.1:8199 DB_MAX_CONNECTIONS=3 GOOGLE_CLIENT_ID=e2e-client GOOGLE_CLIENT_SECRET=e2e-secret services/api/target/release/affylitics-api >> /tmp/e2e-api.log 2>&1 &
+RESEND_API_KEY= DATABASE_URL="$TEST_DB" API_BIND=127.0.0.1:8199 DB_MAX_CONNECTIONS=3 GOOGLE_CLIENT_ID=e2e-client GOOGLE_CLIENT_SECRET=e2e-secret services/api/target/release/affylitics-api >> /tmp/e2e-api.log 2>&1 &
 APIPID=$!
 for i in $(seq 1 40); do curl -sf $A/api/health >/dev/null && break; sleep 1; done
 sleep 2
@@ -121,6 +121,26 @@ loc() { curl -s -o /dev/null -D - "$@" | grep -i '^location:' | sed -E 's/^[Ll]o
 check "forged callback state rejected" "$(loc -H "Cookie: aff_oauth=$STATE_COOKIE" "$A/api/auth/google/callback?code=x&state=forged")" "/login?error=google_failed"
 check "callback without state cookie rejected" "$(loc "$A/api/auth/google/callback?code=x&state=y")" "/login?error=google_expired"
 check "unsafe next is replaced" "$(echo "$STATE_COOKIE" | python3 -c 'import sys,base64; s=sys.stdin.read().strip(); print(base64.urlsafe_b64decode(s + "=" * (-len(s) % 4)).decode().split("|")[3])')" "/dashboard"
+
+# Email verification and password reset (tokens are hashed, so the test plants known ones)
+token_for() { psql "$TEST_DB" -qc "INSERT INTO email_tokens (token_hash, user_id, purpose, expires_at) SELECT digest('$1', 'sha256'), id, '$2', now() + interval '1 hour' FROM users WHERE email = '$3'"; }
+check "sign-up issued a verification token" "$(psql "$TEST_DB" -tAc "SELECT count(*) FROM email_tokens t JOIN users u ON u.id = t.user_id WHERE u.email = 'new@e2e.test' AND t.purpose = 'verify'")" "1"
+token_for e2e-verify-token verify new@e2e.test
+check "email verification works" "$(code -H "$O" -H "$J" $A/api/auth/verify-email -d '{"token":"e2e-verify-token"}')" "200"
+check "me shows email verified" "$(curl -s -H "Cookie: aff_session=$NEW" $A/api/me | field 'd["email_verified"]')" "True"
+check "verification token is single-use" "$(code -H "$O" -H "$J" $A/api/auth/verify-email -d '{"token":"e2e-verify-token"}')" "400"
+check "forgot password is silent for unknown email" "$(code -H "$O" -H "$J" $A/api/auth/forgot -d '{"email":"nobody@e2e.test"}')" "200"
+check "forgot password issues a reset token" "$(code -H "$O" -H "$J" $A/api/auth/forgot -d '{"email":"pub@e2e.test"}'; psql "$TEST_DB" -tAc "SELECT count(*) FROM email_tokens t JOIN users u ON u.id = t.user_id WHERE u.email = 'pub@e2e.test' AND t.purpose = 'reset'")" "2001"
+check "reset with a wrong token rejected" "$(code -H "$O" -H "$J" $A/api/auth/reset -d '{"token":"nope","password":"brand new password 1"}')" "400"
+token_for e2e-reset-token reset pub@e2e.test
+check "reset rejects a short password" "$(code -H "$O" -H "$J" $A/api/auth/reset -d '{"token":"e2e-reset-token","password":"short"}')" "400"
+check "reset with a valid token works" "$(code -H "$O" -H "$J" $A/api/auth/reset -d '{"token":"e2e-reset-token","password":"brand new password 1"}')" "200"
+check "reset signs out existing sessions" "$(code -H "Cookie: aff_session=$PUB" $A/api/me)" "401"
+check "old password no longer works" "$(code -H "$O" -H "$J" $A/api/auth/login -d '{"email":"pub@e2e.test","password":"another long password"}')" "400"
+check "new password works" "$(code -H "$O" -H "$J" $A/api/auth/login -d '{"email":"pub@e2e.test","password":"brand new password 1"}')" "200"
+check "reset token is single-use" "$(code -H "$O" -H "$J" $A/api/auth/reset -d '{"token":"e2e-reset-token","password":"another new password"}')" "400"
+token_for e2e-google-reset reset g@e2e.test
+check "Google-only account can add a password" "$( (code -H "$O" -H "$J" $A/api/auth/reset -d '{"token":"e2e-google-reset","password":"google user password"}'; code -H "$O" -H "$J" $A/api/auth/login -d '{"email":"g@e2e.test","password":"google user password"}') | tr -d '\n')" "200200"
 
 kill $APIPID 2>/dev/null; wait $APIPID 2>/dev/null
 psql "$BASE_DB" -qc "DROP DATABASE affylitics_e2e" && echo "test database dropped"

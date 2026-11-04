@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { VerifyBanner } from "@/components/AccountForms";
 import { DashNav } from "@/components/DashNav";
 import { requireMe } from "@/lib/session";
 
@@ -12,7 +13,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="container dash">
       <DashNav role={me.role} name={me.display_name} />
-      <div>{children}</div>
+      <div>
+        {!me.email_verified && <VerifyBanner email={me.email} />}
+        {children}
+      </div>
     </div>
   );
 }

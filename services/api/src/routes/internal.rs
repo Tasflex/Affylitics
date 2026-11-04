@@ -13,8 +13,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use uuid::Uuid;
 
+use super::track;
 use crate::{
-    crypto,
+    crypto, email,
     error::{AppError, AppResult},
     ledger, AppState,
 };
@@ -159,6 +160,23 @@ async fn payout_result(_: Internal, State(state): State<AppState>, Path(id): Pat
     };
     ledger::post(&mut tx, kind, Some(id), None, &[(clearing, -amount), (dest, amount)]).await?;
     tx.commit().await?;
+
+    if let Some((to, name)) = track::contact(&state, user_id).await {
+        let origin = &state.cfg.public_origin;
+        let mail = if r.status == "paid" {
+            let rail: String = sqlx::query_scalar("SELECT m.rail FROM payouts p JOIN payout_methods m ON m.id = p.method_id WHERE p.id = $1")
+                .bind(id)
+                .fetch_one(&state.db)
+                .await
+                .unwrap_or_default();
+            let method = state.rails.rail(&rail).map(|r| r.name.clone()).unwrap_or_else(|| "payout method".into());
+            email::payout_sent(&to, &name, &track::usd(amount), &method, origin)
+        } else {
+            let reason = r.failure_reason.as_deref().unwrap_or("the payment provider declined it");
+            email::payout_failed(&to, &name, &track::usd(amount), reason, origin)
+        };
+        email::send_later(&state, mail);
+    }
     Ok(Json(json!({ "ok": true })))
 }
 

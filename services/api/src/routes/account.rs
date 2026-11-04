@@ -7,10 +7,57 @@ use uuid::Uuid;
 use super::{limit, valid_country};
 use crate::{
     auth::{self, CurrentUser, SESSION_COOKIE},
-    crypto,
+    crypto, email,
     error::{AppError, AppResult},
     ledger, AppState,
 };
+
+fn valid_password(p: &str) -> AppResult<()> {
+    if p.chars().count() < 10 || p.len() > 128 {
+        return Err(AppError::BadRequest("password must be 10 to 128 characters".into()));
+    }
+    Ok(())
+}
+
+/// Issues a single-use email token, replacing any unused one for the same purpose. Only its
+/// SHA-256 is stored.
+async fn issue_token(state: &AppState, user_id: Uuid, purpose: &str, hours: i64) -> AppResult<String> {
+    let token = crypto::random_token(32);
+    let mut tx = state.db.begin().await?;
+    sqlx::query("DELETE FROM email_tokens WHERE user_id = $1 AND purpose = $2 AND used_at IS NULL")
+        .bind(user_id)
+        .bind(purpose)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("INSERT INTO email_tokens (token_hash, user_id, purpose, expires_at) VALUES ($1, $2, $3, now() + make_interval(hours => $4))")
+        .bind(crypto::sha256(token.as_bytes()))
+        .bind(user_id)
+        .bind(purpose)
+        .bind(hours as i32)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(token)
+}
+
+/// Marks a token used and returns its user, or None if it is wrong, used or expired.
+async fn consume_token(conn: &mut sqlx::PgConnection, token: &str, purpose: &str) -> sqlx::Result<Option<Uuid>> {
+    sqlx::query_scalar(
+        "UPDATE email_tokens SET used_at = now()
+         WHERE token_hash = $1 AND purpose = $2 AND used_at IS NULL AND expires_at > now() RETURNING user_id",
+    )
+    .bind(crypto::sha256(token.trim().as_bytes()))
+    .bind(purpose)
+    .fetch_optional(conn)
+    .await
+}
+
+async fn send_verification(state: &AppState, user_id: Uuid, to: &str, name: &str) -> AppResult<()> {
+    let token = issue_token(state, user_id, "verify", 48).await?;
+    let link = format!("{}/verify-email?token={token}", state.cfg.public_origin);
+    email::send_later(state, email::verify_email(to, name, &link));
+    Ok(())
+}
 
 #[derive(Deserialize)]
 pub struct SignupBody {
@@ -40,9 +87,7 @@ pub async fn signup(
     if !valid_email(&email) {
         return Err(AppError::BadRequest("enter a valid email address".into()));
     }
-    if body.password.chars().count() < 10 || body.password.len() > 128 {
-        return Err(AppError::BadRequest("password must be 10 to 128 characters".into()));
-    }
+    valid_password(&body.password)?;
     if display_name.is_empty() || display_name.chars().count() > 80 {
         return Err(AppError::BadRequest("name must be 1 to 80 characters".into()));
     }
@@ -76,6 +121,7 @@ pub async fn signup(
     tx.commit().await?;
 
     auth::audit(&state, Some(user_id), "signup", None, json!({ "role": body.role, "country": country }), &headers).await;
+    send_verification(&state, user_id, &email, &display_name).await?;
     let cookie = auth::start_session(&state, user_id, &headers).await?;
     Ok((jar.add(cookie), Json(json!({ "id": user_id }))))
 }
@@ -250,7 +296,89 @@ pub async fn onboarding(
 
     if body.complete {
         auth::audit(&state, Some(user.id), "onboarding.complete", None, json!({}), &headers).await;
+        let (name, role): (String, String) = sqlx::query_as("SELECT display_name, role::text FROM users WHERE id = $1")
+            .bind(user.id)
+            .fetch_one(&state.db)
+            .await?;
+        email::send_later(&state, email::welcome(&user.email, &name, &role, &state.cfg.public_origin));
     }
+    Ok(Json(json!({ "ok": true })))
+}
+
+// ── Email verification and password reset ──────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct TokenBody {
+    token: String,
+}
+
+pub async fn verify_email(State(state): State<AppState>, headers: HeaderMap, Json(body): Json<TokenBody>) -> AppResult<Json<Value>> {
+    limit(&state, &headers, "verify", 20, 3600)?;
+    let mut tx = state.db.begin().await?;
+    let user_id = consume_token(&mut tx, &body.token, "verify")
+        .await?
+        .ok_or_else(|| AppError::BadRequest("this link is invalid or has expired; request a new one from your dashboard".into()))?;
+    sqlx::query("UPDATE users SET email_verified = true WHERE id = $1").bind(user_id).execute(&mut *tx).await?;
+    tx.commit().await?;
+    auth::audit(&state, Some(user_id), "email.verified", None, json!({}), &headers).await;
+    Ok(Json(json!({ "ok": true })))
+}
+
+pub async fn resend_verification(State(state): State<AppState>, headers: HeaderMap, user: CurrentUser) -> AppResult<Json<Value>> {
+    limit(&state, &headers, "resend_verify", 3, 3600)?;
+    if user.email_verified {
+        return Ok(Json(json!({ "ok": true, "already_verified": true })));
+    }
+    send_verification(&state, user.id, &user.email, &user.display_name).await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+#[derive(Deserialize)]
+pub struct ForgotBody {
+    email: String,
+}
+
+/// Always answers the same way, so it can't be used to find out which emails have accounts.
+pub async fn forgot_password(State(state): State<AppState>, headers: HeaderMap, Json(body): Json<ForgotBody>) -> AppResult<Json<Value>> {
+    limit(&state, &headers, "forgot", 5, 3600)?;
+    let email_addr = body.email.trim().to_lowercase();
+    let user: Option<(Uuid, String)> = sqlx::query_as("SELECT id, display_name FROM users WHERE email = $1 AND status = 'active'")
+        .bind(&email_addr)
+        .fetch_optional(&state.db)
+        .await?;
+    if let Some((user_id, name)) = user {
+        let token = issue_token(&state, user_id, "reset", 1).await?;
+        let link = format!("{}/reset-password?token={token}", state.cfg.public_origin);
+        email::send_later(&state, email::reset_password(&email_addr, &name, &link));
+        auth::audit(&state, Some(user_id), "password.reset_requested", None, json!({}), &headers).await;
+    }
+    Ok(Json(json!({ "ok": true })))
+}
+
+#[derive(Deserialize)]
+pub struct ResetBody {
+    token: String,
+    password: String,
+}
+
+/// Sets a new password (also lets Google-only accounts add one), verifies the email, and signs
+/// out every existing session.
+pub async fn reset_password(State(state): State<AppState>, headers: HeaderMap, Json(body): Json<ResetBody>) -> AppResult<Json<Value>> {
+    limit(&state, &headers, "reset", 10, 3600)?;
+    valid_password(&body.password)?;
+    let hash = crypto::hash_password(&body.password)?;
+    let mut tx = state.db.begin().await?;
+    let user_id = consume_token(&mut tx, &body.token, "reset")
+        .await?
+        .ok_or_else(|| AppError::BadRequest("this link is invalid or has expired; request a new one".into()))?;
+    sqlx::query("UPDATE users SET password_hash = $2, email_verified = true WHERE id = $1")
+        .bind(user_id)
+        .bind(&hash)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM sessions WHERE user_id = $1").bind(user_id).execute(&mut *tx).await?;
+    tx.commit().await?;
+    auth::audit(&state, Some(user_id), "password.reset", None, json!({}), &headers).await;
     Ok(Json(json!({ "ok": true })))
 }
 

@@ -124,6 +124,7 @@ export function AuthForm({ mode, countries = [], googleEnabled = false }: { mode
           aria-describedby={mode === "signup" ? `${id}-pw-hint` : undefined}
         />
         {mode === "signup" && <span className="hint" id={`${id}-pw-hint`}>At least 10 characters. A short sentence works well.</span>}
+        {mode === "login" && <Link href="/forgot-password" className="hint" style={{ justifySelf: "end" }}>Forgot password?</Link>}
       </div>
 
       <button type="submit" className="btn" disabled={busy} style={{ width: "100%" }}>

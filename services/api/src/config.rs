@@ -17,6 +17,9 @@ pub struct Config {
     pub rails_path: String,
     /// Google OAuth client. Sign-in with Google is off unless both are set.
     pub google: Option<GoogleOAuth>,
+    /// Resend API key for transactional email; emails are only logged when unset.
+    pub resend_key: Option<String>,
+    pub email_from: String,
 }
 
 pub struct GoogleOAuth {
@@ -61,6 +64,8 @@ impl Config {
             google: optional("GOOGLE_CLIENT_ID")
                 .zip(optional("GOOGLE_CLIENT_SECRET"))
                 .map(|(client_id, client_secret)| GoogleOAuth { client_id, client_secret }),
+            resend_key: optional("RESEND_API_KEY"),
+            email_from: optional("EMAIL_FROM").unwrap_or_else(|| "NetAffil <hello@netaffil.com>".into()),
         })
     }
 }
