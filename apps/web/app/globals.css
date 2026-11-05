@@ -97,10 +97,15 @@ a:hover { color: var(--accent-hover); }
 /* ── Header ─────────────────────────────────────────────── */
 .site-header { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: saturate(160%) blur(14px); border-bottom: 1px solid var(--border); }
 .site-header .container { display: flex; align-items: center; gap: 16px; min-height: 70px; }
-.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--heading); font-weight: 800; font-size: 1.28rem; letter-spacing: -.02em; }
-.brand:hover { color: var(--heading); }
-.brand .mark { width: 36px; height: 36px; flex: none; }
-.brand b { color: var(--orange-ink); font-weight: 800; }
+.brand { display: inline-flex; align-items: center; flex: none; }
+.brand img { height: 36px; width: auto; }
+.brand .logo-dark { display: none; }
+:root[data-theme="dark"] .brand .logo-light { display: none; }
+:root[data-theme="dark"] .brand .logo-dark { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand .logo-light { display: none; }
+  :root:not([data-theme="light"]) .brand .logo-dark { display: block; }
+}
 .nav { margin-left: auto; display: flex; align-items: center; gap: 2px; }
 .nav a.navlink { color: var(--heading); text-decoration: none; font-weight: 600; padding: 8px 12px; font-size: .96rem; border-radius: 8px; }
 .nav a.navlink:hover { background: var(--surface); color: var(--heading); }
