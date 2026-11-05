@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { Icon } from "@/components/Icons";
 import { EXAMPLE_OFFERS, OfferCard } from "@/components/OfferCard";
 import { serverApi, type Offer } from "@/lib/api";
 
-export const metadata: Metadata = {
-  title: "Explore affiliate offers from brands worldwide",
-  description: "Browse funded affiliate campaigns on NetAffil. Compare commission, conversion type, cookie window and target markets, then get your link in one click.",
-  alternates: { canonical: "/offers" },
-};
+export const metadata: Metadata = pageMeta({
+  title: "Affiliate offers from brands worldwide",
+  description: "Browse funded affiliate programs on NetAffil. Compare commission, conversion type, cookie window and target markets, then get your affiliate link in one click.",
+  path: "/offers",
+});
 
 export const revalidate = 300;
 

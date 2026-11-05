@@ -1,15 +1,38 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { HeroScene } from "@/components/HeroScene";
 import { Icon } from "@/components/Icons";
 import { JsonLd } from "@/components/JsonLd";
+import { PopularCountries, PromoteChannels, regionAnchor } from "@/components/Marketing";
 import { EXAMPLE_OFFERS, OfferCard } from "@/components/OfferCard";
 import { RailFinder } from "@/components/RailFinder";
 import { serverApi, type Offer } from "@/lib/api";
 import { allCountries, REGION_NAMES } from "@/lib/rails";
+import { faqPage, pageMeta } from "@/lib/seo";
+import { SITE_NAME } from "@/lib/site";
 
 export const revalidate = 300;
 
+export const metadata: Metadata = {
+  ...pageMeta({
+    title: `${SITE_NAME}: Global Affiliate Marketplace with Local Payouts`,
+    description:
+      "Join NetAffil, the global affiliate network. Affiliates promote funded offers and withdraw by M-Pesa, mobile money, UPI, PIX, bank or PayPal. Brands pay only for confirmed sales.",
+    path: "/",
+  }),
+  // The home page title is complete on its own; skip the "| NetAffil" template.
+  title: { absolute: `${SITE_NAME}: Global Affiliate Marketplace with Local Payouts` },
+};
+
 const FAQ = [
+  {
+    q: "What is affiliate marketing?",
+    a: "Affiliate marketing is a way to earn by recommending products. A brand gives you a unique link; when someone buys or signs up through it, you earn a commission. Brands only pay for real results, and affiliates don't need to hold stock or handle customers.",
+  },
+  {
+    q: "Can I do affiliate marketing without a website?",
+    a: "Yes. Many NetAffil affiliates promote from YouTube, TikTok, Instagram, newsletters or WhatsApp and Telegram communities. Each offer lists the channels the brand allows.",
+  },
   {
     q: "Who can join NetAffil?",
     a: "Brands of any size that sell online, and affiliates anywhere in the world: bloggers, creators, community admins, comparison and coupon sites. Joining is free for affiliates.",
@@ -46,7 +69,7 @@ export default async function Home() {
           <div>
             <p className="eyebrow">Affiliate marketing without borders</p>
             <h1>
-              The world is <span className="grad">your marketplace.</span>
+              The world is your <span className="grad">affiliate marketplace.</span>
             </h1>
             <p className="tagline"><span>Connect</span><span>Promote</span><span>Earn</span><span>Get paid</span></p>
             <p className="lede">
@@ -152,6 +175,21 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Ways to promote */}
+      <section className="section" aria-labelledby="channels" style={{ paddingTop: 0 }}>
+        <div className="container">
+          <div className="section-head">
+            <p className="eyebrow">Ways to promote</p>
+            <h2 id="channels">Earn from the audience you already have</h2>
+            <p className="lede">
+              You don&apos;t need a big following or a website. Affiliates on NetAffil earn from search, video, social and
+              messaging communities, in any language and from any country.
+            </p>
+          </div>
+          <PromoteChannels />
+        </div>
+      </section>
+
       {/* 6 · How it works */}
       <section className="section surface" aria-labelledby="how">
         <div className="container">
@@ -224,13 +262,16 @@ export default async function Home() {
           </div>
           <div className="regions">
             {byRegion.map(({ region, list }) => (
-              <Link key={region} href="/payouts" className="region">
+              <Link key={region} href={`/payouts#${regionAnchor(region)}`} className="region">
                 <div className="count">{list.length}</div>
                 <div className="name">{region}</div>
                 <div className="eg">{list.slice(0, 3).map((c) => c.name).join(", ")}…</div>
               </Link>
             ))}
           </div>
+          <h3 style={{ marginTop: 48 }}>Popular payout countries</h3>
+          <PopularCountries limit={12} />
+          <Link href="/payouts" className="btn ghost" style={{ marginTop: 24 }}>See all {countries.length} countries <Icon.arrow /></Link>
         </div>
       </section>
 
@@ -286,13 +327,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-        }}
-      />
+      <JsonLd data={{ "@context": "https://schema.org", ...faqPage(FAQ) }} />
     </>
   );
 }

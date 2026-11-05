@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GetLinkButton } from "@/components/GetLinkButton";
@@ -17,11 +18,11 @@ async function load(slug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const o = await load((await params).slug);
   if (!o) return { title: "Offer not found", robots: { index: false } };
-  return {
+  return pageMeta({
     title: `${o.title} affiliate program: ${payoutLabel(o)}`,
     description: `Promote ${o.title} by ${o.brand} and earn ${payoutLabel(o)}. Open to publishers in every country.`,
-    alternates: { canonical: `/offers/${o.slug}` },
-  };
+    path: `/offers/${o.slug}`,
+  });
 }
 
 export default async function OfferPage({ params }: Props) {

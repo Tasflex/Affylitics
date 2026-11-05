@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Privacy policy", alternates: { canonical: "/legal/privacy" } };
+export const metadata: Metadata = pageMeta({ title: "Privacy policy", description: "What data NetAffil collects, why, the cookies and analytics we use, and your rights.", path: "/legal/privacy" });
 
 export default function Privacy() {
   return (
@@ -14,6 +15,14 @@ export default function Privacy() {
         <li>Click data: a salted one-way hash of the visitor&apos;s IP address and browser, their country and the referring site. We do not store raw IP addresses.</li>
         <li>Verification results from Smile ID or Sumsub. Document images stay with those providers.</li>
       </ul>
+      <h2>Cookies and analytics</h2>
+      <p>
+        We use a session cookie to keep you signed in, and remember your light or dark theme in your browser. To understand
+        how visitors find and use the site, we use Google Tag Manager and Google Analytics, which set their own cookies and
+        receive information such as the pages you view, your browser and approximate location. Google processes this data
+        under its own privacy policy. You can block these cookies in your browser settings or with Google&apos;s opt-out
+        browser add-on without affecting your account.
+      </p>
       <h2>Why</h2>
       <p>To run the network, pay commissions, prevent fraud and meet legal obligations such as anti-money-laundering checks.</p>
       <h2>Your rights</h2>

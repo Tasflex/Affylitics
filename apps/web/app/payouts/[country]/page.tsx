@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { allCountries, countryBySlug, feeText, KIND_LABEL, lowestMinimum } from "@/lib/rails";
-import { SITE_URL } from "@/lib/site";
+import { regionAnchor } from "@/components/Marketing";
+import { breadcrumbs, faqPage, pageMeta } from "@/lib/seo";
 
 type Props = { params: Promise<{ country: string }> };
 
@@ -17,17 +18,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = countryBySlug((await params).country);
   if (!c) return {};
   const names = c.rails.slice(0, 3).map((r) => r.name).join(", ");
-  return {
+  return pageMeta({
     title: `Affiliate payouts in ${c.name}: ${names}`,
     description: `Join an affiliate network that pays in ${c.name}. Withdraw your commissions by ${names} from $${lowestMinimum(c)}, paid in ${c.currency}.`,
-    alternates: { canonical: `/payouts/${c.slug}` },
-  };
+    path: `/payouts/${c.slug}`,
+  });
 }
 
 export default async function CountryPayouts({ params }: Props) {
   const c = countryBySlug((await params).country);
   if (!c) notFound();
   const first = c.rails[0];
+  const neighbours = allCountries().filter((n) => n.region === c.region && n.code !== c.code);
   const faq = [
     {
       q: `Can I join NetAffil from ${c.name}?`,
@@ -46,7 +48,8 @@ export default async function CountryPayouts({ params }: Props) {
   return (
     <div className="container section">
       <nav aria-label="Breadcrumb" className="muted" style={{ fontSize: ".92rem", marginBottom: 16 }}>
-        <Link href="/payouts">Payouts</Link> <span aria-hidden="true">/</span> {c.region} <span aria-hidden="true">/</span>{" "}
+        <Link href="/payouts">Payouts</Link> <span aria-hidden="true">/</span>{" "}
+        <Link href={`/payouts#${regionAnchor(c.region)}`}>{c.region}</Link> <span aria-hidden="true">/</span>{" "}
         <span aria-current="page">{c.name}</span>
       </nav>
       <p className="eyebrow">{c.region}</p>
@@ -103,21 +106,23 @@ export default async function CountryPayouts({ params }: Props) {
         ))}
       </section>
 
+      {neighbours.length > 0 && (
+        <section style={{ marginTop: 48 }} aria-labelledby="nearby">
+          <h2 id="nearby" style={{ fontSize: "1.6rem" }}>Affiliate payouts elsewhere in {c.region}</h2>
+          <ul className="country-list">
+            {neighbours.map((n) => (
+              <li key={n.code}><Link href={`/payouts/${n.slug}`}>{n.name}</Link></li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <JsonLd
         data={{
           "@context": "https://schema.org",
           "@graph": [
-            {
-              "@type": "BreadcrumbList",
-              itemListElement: [
-                { "@type": "ListItem", position: 1, name: "Payouts", item: `${SITE_URL}/payouts` },
-                { "@type": "ListItem", position: 2, name: c.name, item: `${SITE_URL}/payouts/${c.slug}` },
-              ],
-            },
-            {
-              "@type": "FAQPage",
-              mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-            },
+            breadcrumbs([{ name: "Payouts", path: "/payouts" }, { name: c.name, path: `/payouts/${c.slug}` }]),
+            faqPage(faq),
           ],
         }}
       />

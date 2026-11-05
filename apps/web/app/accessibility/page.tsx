@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Accessibility statement", alternates: { canonical: "/accessibility" } };
+export const metadata: Metadata = pageMeta({ title: "Accessibility statement", description: "How NetAffil is built to be usable by everyone, and how to report an accessibility problem.", path: "/accessibility" });
 
 export default function Accessibility() {
   return (

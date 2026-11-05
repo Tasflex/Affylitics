@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import { Suspense } from "react";
 import { AuthForm } from "@/components/AuthForm";
 import { allCountries } from "@/lib/rails";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: "Create your free account",
   description: "Join NetAffil free as an affiliate or a brand. Sign up with Google or email.",
-  alternates: { canonical: "/signup" },
-};
+  path: "/signup",
+});
 
 // Reads server env at request time so enabling Google sign-in needs no rebuild.
 export const dynamic = "force-dynamic";

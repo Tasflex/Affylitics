@@ -310,6 +310,28 @@ main { display: block; }
 .region .name { font-weight: 800; color: var(--heading); margin-top: 6px; }
 .region .eg { font-size: .86rem; color: var(--muted); }
 
+.country-chips { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.country-chip { display: grid; gap: 2px; padding: 14px 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--border); text-decoration: none; color: inherit; transition: border-color .15s ease, transform .15s ease; }
+.country-chip:hover { border-color: var(--accent); transform: translateY(-2px); color: inherit; }
+.country-chip strong { color: var(--heading); }
+.country-chip span { font-size: .86rem; color: var(--muted); }
+
+/* ── Promotion channels ─────────────────────────────────── */
+.channel-grid { list-style: none; padding: 0; margin: 0; display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.channel { padding: 26px; border-radius: 20px; background: var(--card); border: 1px solid var(--border); }
+.channel:nth-child(3n+2) .icon-tile { background: #fff1dc; color: #b86500; }
+.channel h3 { margin-bottom: 6px; }
+.channel p { color: var(--muted); margin: 0; }
+
+/* ── Worked examples (earnings, pricing) ────────────────── */
+.calc { padding: 8px 24px; border-radius: 24px; box-shadow: var(--shadow-lg); }
+.calc-row { display: flex; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.calc-row span { color: var(--muted); }
+.calc-row strong { color: var(--heading); font-variant-numeric: tabular-nums; }
+.calc-row.total { border-bottom: 0; }
+.calc-row.total span { color: var(--heading); font-weight: 700; }
+.calc-row.total strong { font-family: var(--font-display); font-size: 1.9rem; font-weight: 600; color: var(--green-ink); line-height: 1; }
+
 /* ── Founding partners / CTA band ───────────────────────── */
 .band { background: var(--band); color: #dcdcf0; border-radius: 28px; padding: 56px; position: relative; overflow: hidden; }
 @media (max-width: 640px) { .band { padding: 32px 22px; border-radius: 20px; } }

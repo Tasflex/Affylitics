@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Terms of service", alternates: { canonical: "/legal/terms" } };
+export const metadata: Metadata = pageMeta({ title: "Terms of service", description: "The terms that apply to brands and affiliates using NetAffil.", path: "/legal/terms" });
 
 export default function Terms() {
   return (

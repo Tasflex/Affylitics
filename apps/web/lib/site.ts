@@ -1,5 +1,6 @@
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3100").replace(/\/$/, "");
 export const SITE_NAME = "NetAffil";
+export const GTM_ID = "GTM-547L53LQ";
 export const TAGLINE = "The global affiliate marketplace";
 export const DESCRIPTION =
   "NetAffil connects brands with affiliates worldwide. Brands launch funded affiliate campaigns and reach new markets; affiliates promote great products, earn commissions and withdraw through payment methods that work in their country.";

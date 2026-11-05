@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/Icons";
 import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbs, faqPage, pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "For brands: launch an affiliate program that reaches every market",
+export const metadata: Metadata = pageMeta({
+  title: "Launch an affiliate program: reach affiliates in every market",
   description:
-    "Launch CPS, CPA or CPL affiliate campaigns on NetAffil. Reach publishers worldwide, pay only for confirmed results from a funded escrow, and track with signed server-to-server postbacks.",
-  alternates: { canonical: "/advertisers" },
-};
+    "Start an affiliate program on NetAffil. Launch CPS, CPA or CPL campaigns, reach affiliates worldwide, pay only for confirmed results from a funded escrow and track with signed postbacks.",
+  path: "/advertisers",
+});
 
 const SIGNATURE_EXAMPLE = `ts=$(date +%s)
 body='{"click_id":"<aff_click from your landing URL>","external_ref":"order-1042","sale_cents":4999}'
@@ -25,6 +26,8 @@ const FAQ = [
   { q: "What does NetAffil cost?", a: "No setup or monthly fees. You pay the commission you set plus a 20% platform fee, only on confirmed conversions." },
   { q: "How do I control spend?", a: "Campaigns draw from an escrow you top up. If it runs low, your campaigns pause automatically, so you never owe more than you funded." },
   { q: "What if a customer refunds?", a: "Every campaign has a hold period you choose. Reject a conversion during it, with a reason, and the commission and fee return to your escrow." },
+  { q: "What's the minimum to get started?", a: "There's no minimum contract. You can fund escrow from $10 per top-up, and campaigns go live as soon as they're funded." },
+  { q: "Do I need a developer?", a: "Someone who can add one server request to your order confirmation. When an order is confirmed, your backend sends a signed postback to NetAffil; the example on this page works from any language." },
   { q: "Can I target specific countries?", a: "Yes. Limit a campaign to the countries where you sell. Affiliates promoting it can be anywhere, because they reach audiences across borders." },
 ];
 
@@ -69,7 +72,31 @@ export default function Advertisers() {
         </div>
       </section>
 
-      <section className="section" id="tracking">
+      <section className="section" aria-labelledby="pricing">
+        <div className="container payout-grid">
+          <div>
+            <p className="eyebrow">Pricing</p>
+            <h2 id="pricing">Pay for results, nothing else</h2>
+            <p className="lede">
+              No setup fee, no monthly fee, no minimum contract. You choose the commission; NetAffil adds a 20% platform fee
+              on top, charged only when a conversion is confirmed.
+            </p>
+            <ul className="check-list">
+              <li>Affiliates see and earn your full commission</li>
+              <li>Rejected conversions refund the commission and the fee</li>
+              <li>Campaigns pause automatically when escrow runs low</li>
+            </ul>
+          </div>
+          <div className="calc card" role="group" aria-label="Example cost per conversion">
+            <div className="calc-row"><span>Commission you set</span><strong>$10.00</strong></div>
+            <div className="calc-row"><span>Platform fee (20%)</span><strong>$2.00</strong></div>
+            <div className="calc-row total"><span>Cost per confirmed sale</span><strong>$12.00</strong></div>
+            <p className="muted" style={{ margin: "12px 0 0", fontSize: ".9rem" }}>Example with a fixed $10 commission. Revenue-share offers work the same way on the sale value.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="section surface" id="tracking">
         <div className="container payout-grid" style={{ alignItems: "start" }}>
           <div>
             <p className="eyebrow">Tracking</p>
@@ -91,7 +118,7 @@ export default function Advertisers() {
         </div>
       </section>
 
-      <section className="section tight">
+      <section className="section">
         <div className="container" style={{ maxWidth: 860 }}>
           <h2>Brand questions</h2>
           <div className="faq">
@@ -103,7 +130,12 @@ export default function Advertisers() {
         </div>
       </section>
 
-      <JsonLd data={{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }} />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@graph": [breadcrumbs([{ name: "Home", path: "/" }, { name: "For brands", path: "/advertisers" }]), faqPage(FAQ)],
+        }}
+      />
     </>
   );
 }
