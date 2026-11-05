@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
-import { allCountries, countryBySlug, feeText, KIND_LABEL, lowestMinimum } from "@/lib/rails";
+import { allCountries, countryBySlug, feeText, KIND_LABEL, lowestMinimum, railNames } from "@/lib/rails";
 import { regionAnchor } from "@/components/Marketing";
 import { breadcrumbs, faqPage, pageMeta } from "@/lib/seo";
 
@@ -17,7 +17,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = countryBySlug((await params).country);
   if (!c) return {};
-  const names = c.rails.slice(0, 3).map((r) => r.name).join(", ");
+  const names = railNames(c).slice(0, 3).join(", ");
   return pageMeta({
     title: `Affiliate payouts in ${c.name}: ${names}`,
     description: `Join an affiliate network that pays in ${c.name}. Withdraw your commissions by ${names} from $${lowestMinimum(c)}, paid in ${c.currency}.`,
@@ -55,8 +55,8 @@ export default async function CountryPayouts({ params }: Props) {
       <p className="eyebrow">{c.region}</p>
       <h1>Affiliate payouts in {c.name}</h1>
       <p className="lede">
-        Earn commissions promoting funded offers and withdraw to {c.rails.map((r) => r.name).slice(0, 3).join(", ")}
-        {c.rails.length > 3 ? " and more" : ""}. Balances are held in US dollars and paid out in {c.currency}
+        Earn commissions promoting funded offers and withdraw to {railNames(c).slice(0, 3).join(", ")}
+        {railNames(c).length > 3 ? " and more" : ""}. Balances are held in US dollars and paid out in {c.currency}
         {c.currency === "USD" ? "" : " at the day's exchange rate"}.
       </p>
       {c.review && (

@@ -109,6 +109,11 @@ export function feeText(r: Rail): string {
   return parts.length ? `${parts.join(" + ")} fee` : "No fee";
 }
 
+/** Distinct payout method names, in order: two providers can offer the same rail (e.g. local bank). */
+export function railNames(c: CountryRails): string[] {
+  return [...new Set(c.rails.map((r) => r.name))];
+}
+
 export function lowestMinimum(c: CountryRails): number {
   return Math.min(...c.rails.map((r) => r.min_usd));
 }
