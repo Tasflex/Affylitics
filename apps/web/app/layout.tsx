@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Ibarra_Real_Nova, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Analytics, AnalyticsNoScript } from "@/components/Analytics";
+import { CookieConsent } from "@/components/CookieConsent";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { JsonLd } from "@/components/JsonLd";
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SiteHeader />
         <main id="main" tabIndex={-1}>{children}</main>
         <SiteFooter />
+        <CookieConsent />
         <JsonLd
           data={{
             "@context": "https://schema.org",

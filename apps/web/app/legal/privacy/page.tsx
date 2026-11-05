@@ -15,13 +15,17 @@ export default function Privacy() {
         <li>Click data: a salted one-way hash of the visitor&apos;s IP address and browser, their country and the referring site. We do not store raw IP addresses.</li>
         <li>Verification results from Smile ID or Sumsub. Document images stay with those providers.</li>
       </ul>
-      <h2>Cookies and analytics</h2>
+      <h2 id="cookies">Cookies and analytics</h2>
       <p>
-        We use a session cookie to keep you signed in, and remember your light or dark theme in your browser. To understand
-        how visitors find and use the site, we use Google Tag Manager and Google Analytics, which set their own cookies and
-        receive information such as the pages you view, your browser and approximate location. Google processes this data
-        under its own privacy policy. You can block these cookies in your browser settings or with Google&apos;s opt-out
-        browser add-on without affecting your account.
+        We use a session cookie to keep you signed in, and remember your light or dark theme and your cookie choice in your
+        browser. These are essential and always on.
+      </p>
+      <p>
+        Only if you accept cookies do we use Google Analytics, through Google Tag Manager, to understand how visitors find
+        and use the site. Its cookies record information such as the pages you view, your browser and approximate location,
+        and Google processes this data under its own privacy policy. If you reject them, or haven&apos;t chosen yet, no
+        analytics or advertising cookies are set. You can change your choice at any time with &ldquo;Cookie settings&rdquo;
+        at the bottom of every page.
       </p>
       <h2>Why</h2>
       <p>To run the network, pay commissions, prevent fraud and meet legal obligations such as anti-money-laundering checks.</p>

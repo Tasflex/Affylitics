@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CookieSettingsButton } from "./CookieConsent";
 import { Logo } from "./Logo";
 
 export function SiteFooter() {
@@ -35,6 +36,7 @@ export function SiteFooter() {
               <li><Link href="/legal/terms">Terms</Link></li>
               <li><Link href="/legal/privacy">Privacy</Link></li>
               <li><Link href="/accessibility">Accessibility</Link></li>
+              <li><CookieSettingsButton /></li>
             </ul>
           </div>
         </div>
